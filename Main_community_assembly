@@ -1,0 +1,1059 @@
+library(NST)
+library(iCAMP)
+library(fossil)
+library(dplyr)
+library(tidyr)
+library(ggtree)
+library(ggplot2)
+library(safedata)
+set_safe_dir('my_safe_directory')
+getOption('safedata.dir')
+
+
+##################################################################################
+#################################### WEEVILS #####################################
+##################################################################################
+
+## Weevil (beetle family superfamily Curculionoidea) abundance data collected by Adam Sharp et al. https://doi.org/10.5281/zenodo.1323504 
+
+# Load the Staphylinidae data
+weevils <- load_safe_data(1323504, 'Weevils')
+View(weevils)
+
+# Remove oil palm
+weevils <- weevils[ grep("OP", weevils$site, invert = TRUE) , ] 
+
+# Construct community composition matrix
+
+count <- weevils %>% group_by(site) %>% add_count(taxon)
+weevils$Count <- count$n
+weevils <- as.data.frame(weevils %>% group_by(site) %>% distinct(taxon, .keep_all= TRUE)) # Remove repetition
+
+weevils_composition_matrix <- create.matrix(weevils,  tax.name = "taxon",  locality = "site", abund = TRUE, abund.col = "Count")
+weevils_composition_matrix <- t(weevils_composition_matrix)
+
+sum(colSums(weevils_composition_matrix)) # number of individuals
+ncol(weevils_composition_matrix) # number of species
+nrow(weevils_composition_matrix) # number of sites
+
+## ACD - above-ground carbon density data derived from LiDAR by Swinfield et al., 2014 https://doi.org/10.5281/zenodo.4020697 
+ACD_all <- read.csv("ACD_LIDAR.csv")
+colnames(ACD_all) <- slice(ACD_all, 5)
+ACD_all <- ACD_all[-(1:5), ]
+
+# Log-transformation
+ACD_all$agb <- as.numeric(ACD_all$agb)
+summary(ACD_all$agb)
+ACD_all$logACD <- log10(as.numeric(ACD_all$agb))
+
+# Select only sites that are in weevils_composition_matrix
+ACD_weevils <- subset(ACD_all, ACD_all$ID %in% rownames(weevils_composition_matrix))
+
+# Calculate mean ACD
+ACD_weevils <- separate(ACD_weevils, ID, into = c("block", "num"), remove = FALSE)
+ACD_weevils <- as.data.frame(ACD_weevils %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+
+# Create summarised table to be used for plotting and regression
+ACD_weevils_summary <- as.data.frame(ACD_weevils %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+# Just sampling block names to be used for analysis
+Sites_weevils <- subset(ACD_weevils, select = c(ID, block))
+rownames(Sites_weevils) <- Sites_weevils[, 1]
+Sites_weevils <- subset(Sites_weevils, select = block)
+
+
+##### NST - normalised stochasticity ratio #####
+
+NST_weevils <- tNST(weevils_composition_matrix, Sites_weevils, dist.method = "ruzicka", output.rand = TRUE, RC = TRUE)
+NST_weevils$index.grp
+mean(NST_weevils$index.grp$NST.i.ruzicka)
+
+NST_weevils_summary <- subset(NST_weevils$index.grp, select = c(group, NST.i.ruzicka))
+
+NST_weevils_summary <- NST_weevils_summary %>% split(NST_weevils_summary$group) # Split so you can separately index each sampling block
+
+NST_weevils_summary
+
+# Bootstrapping
+NST_weevils_boot <- nst.boot(NST_weevils, out.detail = TRUE, nworker = 2)
+NST_weevils_boot
+
+# Taking the 95th quantiles of the bootstrapping list for each sampling block
+# The bootstrapping list is the results of each random draw
+NST_weevils_boot$detail
+
+NST_weevils_A <- c('A', NST_weevils_summary$'A'$NST.i.ruzicka, 
+                   quantile(NST_weevils_boot$detail$NST.boot$'A', probs = 0.025), 
+                   quantile(NST_weevils_boot$detail$NST.boot$'A', probs = 0.975))
+NST_weevils_B <- c('B', NST_weevils_summary$'B'$NST.i.ruzicka, 
+                   quantile(NST_weevils_boot$detail$NST.boot$'B', probs = 0.025), 
+                   quantile(NST_weevils_boot$detail$NST.boot$'B', probs = 0.975))
+NST_weevils_C <- c('C', NST_weevils_summary$'C'$NST.i.ruzicka, 
+                   quantile(NST_weevils_boot$detail$NST.boot$'C', probs = 0.025), 
+                   quantile(NST_weevils_boot$detail$NST.boot$'C', probs = 0.975))
+NST_weevils_D <- c('D', NST_weevils_summary$'D'$NST.i.ruzicka, 
+                   quantile(NST_weevils_boot$detail$NST.boot$'D', probs = 0.025), 
+                   quantile(NST_weevils_boot$detail$NST.boot$'D', probs = 0.975))
+NST_weevils_E <- c('E', NST_weevils_summary$'E'$NST.i.ruzicka, 
+                   quantile(NST_weevils_boot$detail$NST.boot$'E', probs = 0.025), 
+                   quantile(NST_weevils_boot$detail$NST.boot$'E', probs = 0.975))
+NST_weevils_F <- c('F', NST_weevils_summary$'F'$NST.i.ruzicka, 
+                   quantile(NST_weevils_boot$detail$NST.boot$'F', probs = 0.025), 
+                   quantile(NST_weevils_boot$detail$NST.boot$'F', probs = 0.975))
+NST_weevils_LF1 <- c('LF1', NST_weevils_summary$'LF1'$NST.i.ruzicka, 
+                     quantile(NST_weevils_boot$detail$NST.boot$'LF1', probs = 0.025), 
+                     quantile(NST_weevils_boot$detail$NST.boot$'LF1', probs = 0.975))
+NST_weevils_LF2 <- c('LF2', NST_weevils_summary$'LF2'$NST.i.ruzicka, 
+                     quantile(NST_weevils_boot$detail$NST.boot$'LF2', probs = 0.025), 
+                     quantile(NST_weevils_boot$detail$NST.boot$'LF2', probs = 0.975))
+NST_weevils_LF3 <- c('LF3', NST_weevils_summary$'LF3'$NST.i.ruzicka, 
+                     quantile(NST_weevils_boot$detail$NST.boot$'LF3', probs = 0.025), 
+                     quantile(NST_weevils_boot$detail$NST.boot$'LF3', probs = 0.975))
+NST_weevils_LFE <- c('LFE', NST_weevils_summary$'LFE'$NST.i.ruzicka, 
+                     quantile(NST_weevils_boot$detail$NST.boot$'LFE', probs = 0.025), 
+                     quantile(NST_weevils_boot$detail$NST.boot$'LFE', probs = 0.975))
+NST_weevils_VJR <- c('VJR', NST_weevils_summary$'VJR'$NST.i.ruzicka, 
+                     quantile(NST_weevils_boot$detail$NST.boot$'VJR', probs = 0.025), 
+                     quantile(NST_weevils_boot$detail$NST.boot$'VJR', probs = 0.975))
+NST_weevils_OG1 <- c('OG1', NST_weevils_summary$'OG1'$NST.i.ruzicka, 
+                     quantile(NST_weevils_boot$detail$NST.boot$'OG1', probs = 0.025), 
+                     quantile(NST_weevils_boot$detail$NST.boot$'OG1', probs = 0.975))
+NST_weevils_OG2 <- c('OG2', NST_weevils_summary$'OG2'$NST.i.ruzicka, 
+                     quantile(NST_weevils_boot$detail$NST.boot$'OG2', probs = 0.025), 
+                     quantile(NST_weevils_boot$detail$NST.boot$'OG2', probs = 0.975))
+NST_weevils_OG3 <- c('OG3', NST_weevils_summary$'OG3'$NST.i.ruzicka, 
+                     quantile(NST_weevils_boot$detail$NST.boot$'OG3', probs = 0.025), 
+                     quantile(NST_weevils_boot$detail$NST.boot$'OG3', probs = 0.975))
+
+NST_weevils_summary <- as.data.frame(rbind(NST_weevils_A, NST_weevils_B, NST_weevils_C, NST_weevils_D,
+                                           NST_weevils_E, NST_weevils_F, NST_weevils_LF1, NST_weevils_LF2, 
+                                           NST_weevils_LF3, NST_weevils_LFE, NST_weevils_VJR, NST_weevils_OG1,
+                                           NST_weevils_OG2, NST_weevils_OG3))
+
+colnames(NST_weevils_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NST_weevils_summary) = 1:14
+
+NST_weevils_summary$mean <- as.numeric(NST_weevils_summary$mean)
+NST_weevils_summary$lower.95.quant <- as.numeric(NST_weevils_summary$lower.95.quant)
+NST_weevils_summary$upper.95.quant <- as.numeric(NST_weevils_summary$upper.95.quant)
+
+NST_weevils_summary <- left_join(NST_weevils_summary, ACD_weevils_summary, by = "block")
+
+NST_weevils_summary$range <- NST_weevils_summary$upper.95.quant - NST_weevils_summary$lower.95.quant
+
+NST_weevils_summary 
+
+write.csv(NST_weevils_summary, file = "Results/NST_weevils_summary.csv")
+
+##### RC - Raup-Crick #####
+
+RC_weevils <- NST_weevils$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+
+names(RC_weevils)[names(RC_weevils) == "name2"] <- "block_num"
+
+RC_weevils <- separate(RC_weevils, block_num, into = c("block", "num"))
+RC_weevils$RC.ruzicka <- as.numeric(RC_weevils$RC.ruzicka)
+
+# TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
+RC_weevils$RC.ruzicka <- abs(RC_weevils$RC.ruzicka)
+
+# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
+RC_weevils <- RC_weevils %>% mutate(one_minus_RC = 1 - RC.ruzicka)
+# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
+names(RC_weevils)[names(RC_weevils) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
+names(RC_weevils)[names(RC_weevils) == "one_minus_RC"] <- "RC.ruzicka"
+
+## Calculate 95% quantiles by bootstrapping
+RC_weevils <- RC_weevils %>% select('block', 'RC.ruzicka') # Just need RC and block name
+
+RC_weevils <- RC_weevils %>% split( RC_weevils$block) # Split so you can separately index each sampling block
+
+# Function for bootstrapping
+nboot <- 1000
+bootstrap <- function(data){ # Data is one sampling block 
+  for (i in 1:nboot) {
+    boot_sample <-sample(data, replace = TRUE)
+    boot_lci <- quantile(boot_sample, probs = 0.025)
+    boot_uci <- quantile(boot_sample, probs = 0.975)
+    return(c(boot_lci, boot_uci))
+    
+  }
+}
+
+## Calculate mean and bootstrapped CIs for each sampling block
+RC_weevils_summary_A <- c('A', mean(RC_weevils$A$RC.ruzicka), bootstrap(RC_weevils$A$RC.ruzicka))
+RC_weevils_summary_B <- c('B', mean(RC_weevils$B$RC.ruzicka), bootstrap(RC_weevils$B$RC.ruzicka))
+RC_weevils_summary_C <- c('C', mean(RC_weevils$C$RC.ruzicka), bootstrap(RC_weevils$C$RC.ruzicka))
+RC_weevils_summary_D <- c('D', mean(RC_weevils$D$RC.ruzicka), bootstrap(RC_weevils$D$RC.ruzicka))
+RC_weevils_summary_E <- c('E', mean(RC_weevils$E$RC.ruzicka), bootstrap(RC_weevils$E$RC.ruzicka))
+RC_weevils_summary_F <- c('F', mean(RC_weevils$F$RC.ruzicka), bootstrap(RC_weevils$F$RC.ruzicka))
+RC_weevils_summary_LF1 <- c('LF1', mean(RC_weevils$LF1$RC.ruzicka), bootstrap(RC_weevils$LF1$RC.ruzicka))
+RC_weevils_summary_LF2 <- c('LF2', mean(RC_weevils$LF2$RC.ruzicka), bootstrap(RC_weevils$LF2$RC.ruzicka))
+RC_weevils_summary_LF3 <- c('LF3', mean(RC_weevils$LF3$RC.ruzicka), bootstrap(RC_weevils$LF3$RC.ruzicka))
+RC_weevils_summary_LFE <- c('LFE', mean(RC_weevils$LFE$RC.ruzicka), bootstrap(RC_weevils$LFE$RC.ruzicka))
+RC_weevils_summary_VJR <- c('VJR', mean(RC_weevils$VJR$RC.ruzicka), bootstrap(RC_weevils$VJR$RC.ruzicka))
+RC_weevils_summary_OG1 <- c('OG1', mean(RC_weevils$OG1$RC.ruzicka), bootstrap(RC_weevils$OG1$RC.ruzicka))
+RC_weevils_summary_OG2 <- c('OG2', mean(RC_weevils$OG2$RC.ruzicka), bootstrap(RC_weevils$OG2$RC.ruzicka))
+RC_weevils_summary_OG3 <- c('OG3', mean(RC_weevils$OG3$RC.ruzicka), bootstrap(RC_weevils$OG3$RC.ruzicka))
+
+## Combine these all into a dataframe
+RC_weevils_summary <- as.data.frame(rbind(RC_weevils_summary_A, RC_weevils_summary_B, RC_weevils_summary_C, RC_weevils_summary_D, 
+                                          RC_weevils_summary_E, RC_weevils_summary_F, RC_weevils_summary_LF1, RC_weevils_summary_LF2, RC_weevils_summary_LF3,
+                                          RC_weevils_summary_LFE, RC_weevils_summary_VJR, RC_weevils_summary_OG1, RC_weevils_summary_OG2, RC_weevils_summary_OG3))
+
+RC_weevils_summary
+
+# Rename column and row headings
+colnames(RC_weevils_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(RC_weevils_summary) = 1:14
+
+# Add mean ACD
+RC_weevils_summary <- left_join(RC_weevils_summary, ACD_weevils_summary, by = "block")
+
+RC_weevils_summary$mean <- as.numeric(RC_weevils_summary$mean)
+RC_weevils_summary$lower.95.quant <- as.numeric(RC_weevils_summary$lower.95.quant)
+RC_weevils_summary$upper.95.quant <- as.numeric(RC_weevils_summary$upper.95.quant)
+
+RC_weevils_summary$range <- RC_weevils_summary$upper.95.quant - RC_weevils_summary$lower.95.quant
+
+mean(RC_weevils_summary$mean)
+
+write.csv(RC_weevils_summary, file = "Results/RC_weevils_summary.csv")
+
+##### NTP - Neutral taxa percentage #####
+weevils_composition_matrix <- as.data.frame(weevils_composition_matrix)
+str(weevils_composition_matrix)
+
+# Fit Sloan's neutral model
+SNM_weevils <- snm.comm(comm = weevils_composition_matrix, treat = Sites_weevils)
+SNM_weevils$stats
+
+NTP_weevils_data <- SNM_weevils$ratio.summary  %>% filter(index == "mean")
+NTP_weevils_data <- NTP_weevils_data  %>% dplyr :: select(index, treatment.id, Neutral.wt)
+
+NTP_weevils_data <- NTP_weevils_data %>% split(NTP_weevils_data$treatment.id)
+
+NTP_weevils_data
+
+NTP_weevils_A <- c('A', NTP_weevils_data$`A`$Neutral.wt, 
+                   quantile(SNM_weevils$boot.detail$block$'A'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_weevils$boot.detail$block$'A'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_B <- c('B', NTP_weevils_data$`B`$Neutral.wt, 
+                   quantile(SNM_weevils$boot.detail$block$'B'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_weevils$boot.detail$block$'B'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_C <- c('C', NTP_weevils_data$`C`$Neutral.wt, 
+                   quantile(SNM_weevils$boot.detail$block$'C'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_weevils$boot.detail$block$'C'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_D <- c('D', NTP_weevils_data$`D`$Neutral.wt, 
+                   quantile(SNM_weevils$boot.detail$block$'D'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_weevils$boot.detail$block$'D'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_E <- c('E', NTP_weevils_data$`E`$Neutral.wt, 
+                   quantile(SNM_weevils$boot.detail$block$'E'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_weevils$boot.detail$block$'E'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_F <- c('F', NTP_weevils_data$`F`$Neutral.wt, 
+                   quantile(SNM_weevils$boot.detail$block$'F'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_weevils$boot.detail$block$'F'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_LF1 <- c('LF2', NTP_weevils_data$`LF1`$Neutral.wt, 
+                     quantile(SNM_weevils$boot.detail$block$'LF1'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_weevils$boot.detail$block$'LF1'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_LF2 <- c('LF2', NTP_weevils_data$`LF2`$Neutral.wt, 
+                     quantile(SNM_weevils$boot.detail$block$'LF2'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_weevils$boot.detail$block$'LF2'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_LF3 <- c('LF3', NTP_weevils_data$`LF3`$Neutral.wt, 
+                     quantile(SNM_weevils$boot.detail$block$'LF3'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_weevils$boot.detail$block$'LF3'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_LFE <- c('LFE', NTP_weevils_data$`LFE`$Neutral.wt, 
+                     quantile(SNM_weevils$boot.detail$block$'LFE'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_weevils$boot.detail$block$'LFE'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_VJR <- c('VJR', NTP_weevils_data$`VJR`$Neutral.wt, 
+                     quantile(SNM_weevils$boot.detail$block$'VJR'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_weevils$boot.detail$block$'VJR'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_OG1 <- c('OG1', NTP_weevils_data$`OG1`$Neutral.wt, 
+                     quantile(SNM_weevils$boot.detail$block$'OG1'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_weevils$boot.detail$block$'OG1'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_OG2 <- c('OG2', NTP_weevils_data$`OG2`$Neutral.wt, 
+                     quantile(SNM_weevils$boot.detail$block$'OG2'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_weevils$boot.detail$block$'OG2'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_OG3 <- c('OG3', NTP_weevils_data$`OG3`$Neutral.wt, 
+                     quantile(SNM_weevils$boot.detail$block$'OG3'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_weevils$boot.detail$block$'OG3'$Neutral.wt, probs = 0.975))
+
+NTP_weevils_summary <- as.data.frame(rbind(NTP_weevils_A, NTP_weevils_B, NTP_weevils_C, NTP_weevils_D,
+                                           NTP_weevils_E, NTP_weevils_F, NTP_weevils_LF1, NTP_weevils_LF2, 
+                                           NTP_weevils_LF3, NTP_weevils_LFE, NTP_weevils_VJR, NTP_weevils_OG1, 
+                                           NTP_weevils_OG2, NTP_weevils_OG3))
+NTP_weevils_summary
+
+# Rename column and row headings
+colnames(NTP_weevils_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NTP_weevils_summary) = 1:14
+
+# Add mean ACD
+NTP_weevils_summary <- left_join(NTP_weevils_summary, ACD_weevils_summary, by = "block")
+
+str(NTP_weevils_summary)
+NTP_weevils_summary$mean <- as.numeric(NTP_weevils_summary$mean)
+NTP_weevils_summary$lower.95.quant <- as.numeric(NTP_weevils_summary$lower.95.quant)
+NTP_weevils_summary$upper.95.quant <- as.numeric(NTP_weevils_summary$upper.95.quant)
+
+NTP_weevils_summary$range <- NTP_weevils_summary$upper.95.quant - NTP_weevils_summary$lower.95.quant
+
+mean(NTP_weevils_summary$mean)
+
+write.csv(NTP_weevils_summary, file = "Results/NTP_weevils_summary.csv")
+
+##### iCAMP - inferring community assembly mechanisms by phylogenetic bin-based null model analysis #####
+
+## Phylogeny 
+beetles_phylo <- get_phylogeny(1323504)
+weevils_tips <-  intersect(beetles_phylo[["tip.labels"]], colnames(weevils_composition_matrix))
+weevils_phylo <- ape::keep.tip(beetles_phylo, weevils_tips)
+weevils_phylo$tip.labels <- NULL
+weevils_phylo$node.labels <- NULL
+str(weevils_phylo)
+
+# Root the tree
+weevils_phylo_rooted <- phytools::midpoint.root(weevils_phylo)
+weevils_phylo_rooted
+
+# Phylogenetic distance matrix
+pd.weevils = pdist.big(tree = weevils_phylo_rooted, wd=save.wd, nworker = 8, memory.G = 500)
+
+iCAMP_weevils =iCAMP::icamp.big(comm=weevils_composition_matrix, pd.desc = pd.weevils$pd.file, pd.spname=pd.weevils$tip.label,
+                                pd.wd = save.wd, rand = 500, tree=weevils_phylo_rooted,
+                                prefix = 'weevils', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                                phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                                phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                                nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                                qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                                correct.special = TRUE, unit.sum = rowSums(weevils_composition_matrix), special.method = "depend",
+                                ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+
+# Calculate mean of each process in each sampling block 
+iCAMP_weevils_processes <- as.data.frame(iCAMP_weevils$detail$processes)
+colnames(iCAMP_weevils_processes)
+colnames(iCAMP_weevils_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+colMeans(iCAMP_weevils_processes[3:7])
+
+iCAMP_weevils_processes <- tidyr::separate(iCAMP_weevils_processes, sample2, into = c("block", "num")) 
+
+library(dplyr)
+iCAMP_weevils_processes_summary <- as.data.frame(iCAMP_weevils_processes %>% group_by(block) %>% summarise(mean_HeS = mean(HeS),
+                                                                                                           mean_HoS = mean(HoS), 
+                                                                                                           mean_DL = mean(DL),
+                                                                                                           mean_HoD = mean(HoD),
+                                                                                                           mean_Dr = mean(Dr)))
+colMeans(iCAMP_weevils_processes_summary[2:6])
+
+# Join with log ACD
+iCAMP_weevils_processes_summary
+ACD_weevils_summary
+iCAMP_weevils_processes_summary <- left_join(iCAMP_weevils_processes_summary, ACD_weevils_summary, by = 'block')
+
+## Phylogenetic bins
+iCAMP_weevils$detail$taxabin$state.united$bin.united.tax.num # number of taxa in each bin
+iCAMP_weevils$detail$taxabin$sp.bin # which species are in each bin
+
+write.csv(iCAMP_weevils_processes_summary, file = "Results/iCAMP_weevils_processes_summary.csv")
+
+## Plot tree and show bins
+ggtree(weevils_phylo) +
+  geom_tiplab(size = 3) +
+  geom_nodelab(size = 3, nudge_x =-0.5, nudge_y = 1.2) +
+  geom_strip('Exec1', 'Anth1', barsize = 2, color = 'red', 
+             label = 'Bin 2', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Acic2', 'Bari1', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Rhyn7', 'Brent1', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  xlim(0,5) +
+  ggtitle("Weevils") +
+  theme(plot.margin = unit(c(0.1,0.1,0.5,0.1), "cm"), 
+        plot.title = element_text(size = 15))
+ggsave("WeevilsTree.pdf", width = 15, height = 55, units = "cm")
+
+
+########################################################################################
+################################## Rove beetles ########################################
+########################################################################################
+
+## Staphylinidae abundance data collected by Adam Sharp et al. https://doi.org/10.5281/zenodo.1323504 
+# Load the Staphylinidae data
+rove_beetles <- load_safe_data(1323504, 'Staphs')
+
+# Remove oil palm
+rove_beetles <- rove_beetles[ grep("OP", rove_beetles$site, invert = TRUE) , ] 
+
+# Remove taxa that are not in the phylogeny for rove beetles, therefore also not in the iCAMP analysis (includes removing 12131 Staphylinidae that are only identified to family level)
+rove_beetles <- subset(rove_beetles, taxon != 'Staphylinidae')
+rove_beetles <- subset(rove_beetles, taxon != 'Anotylus') 
+rove_beetles <- subset(rove_beetles, taxon != 'Thinocharis')
+
+# Construct community composition matrix
+count <- rove_beetles %>% group_by(site) %>% add_count(taxon)
+rove_beetles$Count <- count$n
+rove_beetles <- as.data.frame(rove_beetles %>% group_by(site) %>% distinct(taxon, .keep_all= TRUE)) # Remove repetition
+
+rove_beetles_composition_matrix <- create.matrix(rove_beetles,  tax.name = "taxon",  locality = "site", abund = TRUE, abund.col = "Count")
+rove_beetles_composition_matrix <- t(rove_beetles_composition_matrix)
+colSums(rove_beetles_composition_matrix)
+rove_beetles_composition_matrix <- as.data.frame(rove_beetles_composition_matrix)
+
+sum(colSums(rove_beetles_composition_matrix)) # number of individuals
+ncol(rove_beetles_composition_matrix) # number of species
+nrow(rove_beetles_composition_matrix) # number of sites
+
+
+## ACD - above-ground carbon density data derived from LiDAR by Swinfield et al., 2014 https://doi.org/10.5281/zenodo.4020697 
+# Select only sites that are in rove_beetles_composition_matrix
+ACD_rove_beetles <- subset(ACD_all, ACD_all$ID %in% rownames(rove_beetles_composition_matrix))
+
+# Calculate mean ACD
+ACD_rove_beetles <- separate(ACD_rove_beetles, ID, into = c("block", "num"), remove = FALSE)
+ACD_rove_beetles <- as.data.frame(ACD_rove_beetles %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+
+# Create summarised table to be used for plotting and regression
+ACD_rove_beetles_summary <- as.data.frame(ACD_rove_beetles %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+# Just sampling block names to be used for analysis
+Sites_rove_beetles <- subset(ACD_rove_beetles, select = c(ID, block))
+rownames(Sites_rove_beetles) <- Sites_rove_beetles[, 1]
+Sites_rove_beetles <- subset(Sites_rove_beetles, select = block)
+
+
+##### NST - normalised stochasticity ratio #####
+NST_rove_beetles <- tNST(rove_beetles_composition_matrix, Sites_rove_beetles, dist.method = "ruzicka", output.rand = TRUE, RC = TRUE)
+mean(NST_rove_beetles$index.grp$NST.i.ruzicka)
+
+NST_rove_beetles_summary <- subset(NST_rove_beetles$index.grp, select = c(group, NST.i.ruzicka))
+
+NST_rove_beetles_summary <- NST_rove_beetles_summary %>% split(NST_rove_beetles_summary$group) # Split so you can separately index each sampling block
+
+# Bootstrapping
+NST_rove_beetles_boot <- nst.boot(NST_rove_beetles, out.detail = TRUE, nworker = 2)
+NST_rove_beetles_boot
+
+# Taking the 95th quantiles of the bootstrapping list for each sampling block
+# The bootstrapping list is the results of each random draw
+
+NST_rove_beetles_A <- c('A', NST_rove_beetles_summary$'A'$NST.i.ruzicka, 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'A', probs = 0.025), 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'A', probs = 0.975))
+NST_rove_beetles_B <- c('B', NST_rove_beetles_summary$'B'$NST.i.ruzicka, 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'B', probs = 0.025), 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'B', probs = 0.975))
+NST_rove_beetles_C <- c('C', NST_rove_beetles_summary$'C'$NST.i.ruzicka, 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'C', probs = 0.025), 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'C', probs = 0.975))
+NST_rove_beetles_D <- c('D', NST_rove_beetles_summary$'D'$NST.i.ruzicka, 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'D', probs = 0.025), 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'D', probs = 0.975))
+NST_rove_beetles_E <- c('E', NST_rove_beetles_summary$'E'$NST.i.ruzicka, 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'E', probs = 0.025), 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'E', probs = 0.975))
+NST_rove_beetles_F <- c('F', NST_rove_beetles_summary$'F'$NST.i.ruzicka, 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'F', probs = 0.025), 
+                        quantile(NST_rove_beetles_boot$detail$NST.boot$'F', probs = 0.975))
+NST_rove_beetles_LF1 <- c('LF1', NST_rove_beetles_summary$'LF1'$NST.i.ruzicka, 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'LF1', probs = 0.025), 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'LF1', probs = 0.975))
+NST_rove_beetles_LF2 <- c('LF2', NST_rove_beetles_summary$'LF2'$NST.i.ruzicka, 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'LF2', probs = 0.025), 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'LF2', probs = 0.975))
+NST_rove_beetles_LF3 <- c('LF3', NST_rove_beetles_summary$'LF3'$NST.i.ruzicka, 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'LF3', probs = 0.025), 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'LF3', probs = 0.975))
+NST_rove_beetles_LFE <- c('LFE', NST_rove_beetles_summary$'LFE'$NST.i.ruzicka, 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'LFE', probs = 0.025), 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'LFE', probs = 0.975))
+NST_rove_beetles_VJR <- c('VJR', NST_rove_beetles_summary$'VJR'$NST.i.ruzicka, 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'VJR', probs = 0.025), 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'VJR', probs = 0.975))
+NST_rove_beetles_OG1 <- c('OG1', NST_rove_beetles_summary$'OG1'$NST.i.ruzicka, 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'OG1', probs = 0.025), 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'OG1', probs = 0.975))
+NST_rove_beetles_OG2 <- c('OG2', NST_rove_beetles_summary$'OG2'$NST.i.ruzicka, 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'OG2', probs = 0.025), 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'OG2', probs = 0.975))
+NST_rove_beetles_OG3 <- c('OG3', NST_rove_beetles_summary$'OG3'$NST.i.ruzicka, 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'OG3', probs = 0.025), 
+                          quantile(NST_rove_beetles_boot$detail$NST.boot$'OG3', probs = 0.975))
+
+NST_rove_beetles_summary <- as.data.frame(rbind(NST_rove_beetles_A, NST_rove_beetles_B, NST_rove_beetles_C, NST_rove_beetles_D,
+                                                NST_rove_beetles_E, NST_rove_beetles_F, NST_rove_beetles_LF1, NST_rove_beetles_LF2, 
+                                                NST_rove_beetles_LF3, NST_rove_beetles_LFE, NST_rove_beetles_VJR, NST_rove_beetles_OG1,
+                                                NST_rove_beetles_OG2, NST_rove_beetles_OG3))
+NST_rove_beetles_summary 
+
+colnames(NST_rove_beetles_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NST_rove_beetles_summary) = 1:14
+
+
+NST_rove_beetles_summary$mean <- as.numeric(NST_rove_beetles_summary$mean)
+NST_rove_beetles_summary$lower.95.quant <- as.numeric(NST_rove_beetles_summary$lower.95.quant)
+NST_rove_beetles_summary$upper.95.quant <- as.numeric(NST_rove_beetles_summary$upper.95.quant)
+
+NST_rove_beetles_summary <- left_join(NST_rove_beetles_summary, ACD_rove_beetles_summary, by = "block")
+
+NST_rove_beetles_summary$range <- NST_rove_beetles_summary$upper.95.quant - NST_rove_beetles_summary$lower.95.quant
+
+mean(NST_rove_beetles_summary $ mean)
+
+write.csv(NST_rove_beetles_summary, file = "Results/NST_rove_beetles_summary.csv")
+
+
+##### RC - Raup-Crick #####
+RC_rove_beetles <- NST_rove_beetles$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+names(RC_rove_beetles)[names(RC_rove_beetles) == "name2"] <- "block_num"
+
+RC_rove_beetles <- separate(RC_rove_beetles, block_num, into = c("block", "num"))
+RC_rove_beetles$RC.ruzicka <- as.numeric(RC_rove_beetles$RC.ruzicka)
+
+# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
+RC_rove_beetles$RC.ruzicka <- abs(RC_rove_beetles$RC.ruzicka)
+
+# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
+RC_rove_beetles <- RC_rove_beetles %>% mutate(one_minus_RC = 1 - RC.ruzicka)
+# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
+names(RC_rove_beetles)[names(RC_rove_beetles) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
+names(RC_rove_beetles)[names(RC_rove_beetles) == "one_minus_RC"] <- "RC.ruzicka"
+
+str(RC_rove_beetles)
+
+## Calculate 95% quantiles by bootstrapping
+RC_rove_beetles <- RC_rove_beetles %>% select('block', 'RC.ruzicka') # Just need RC and block name
+
+RC_rove_beetles <- RC_rove_beetles %>% split( RC_rove_beetles$block) # Split so you can separately index each sampling block
+
+RC_rove_beetles
+
+
+# Function for bootstrapping
+nboot <- 1000
+bootstrap <- function(data){ # Data is one sampling block 
+  for (i in 1:nboot) {
+    boot_sample <-sample(data, replace = TRUE)
+    boot_lci <- quantile(boot_sample, probs = 0.025)
+    boot_uci <- quantile(boot_sample, probs = 0.975)
+    return(c(boot_lci, boot_uci))
+    
+  }
+}
+
+## Calculate mean and bootstrapped CIs for each sampling block
+RC_rove_beetles_summary_A <- c('A', mean(RC_rove_beetles$A$RC.ruzicka), bootstrap(RC_rove_beetles$A$RC.ruzicka))
+RC_rove_beetles_summary_B <- c('B', mean(RC_rove_beetles$B$RC.ruzicka), bootstrap(RC_rove_beetles$B$RC.ruzicka))
+RC_rove_beetles_summary_C <- c('C', mean(RC_rove_beetles$C$RC.ruzicka), bootstrap(RC_rove_beetles$C$RC.ruzicka))
+RC_rove_beetles_summary_D <- c('D', mean(RC_rove_beetles$D$RC.ruzicka), bootstrap(RC_rove_beetles$D$RC.ruzicka))
+RC_rove_beetles_summary_E <- c('E', mean(RC_rove_beetles$E$RC.ruzicka), bootstrap(RC_rove_beetles$E$RC.ruzicka))
+RC_rove_beetles_summary_F <- c('F', mean(RC_rove_beetles$F$RC.ruzicka), bootstrap(RC_rove_beetles$F$RC.ruzicka))
+RC_rove_beetles_summary_LF1 <- c('LF1', mean(RC_rove_beetles$LF1$RC.ruzicka), bootstrap(RC_rove_beetles$LF1$RC.ruzicka))
+RC_rove_beetles_summary_LF2 <- c('LF2', mean(RC_rove_beetles$LF2$RC.ruzicka), bootstrap(RC_rove_beetles$LF2$RC.ruzicka))
+RC_rove_beetles_summary_LF3 <- c('LF3', mean(RC_rove_beetles$LF3$RC.ruzicka), bootstrap(RC_rove_beetles$LF3$RC.ruzicka))
+RC_rove_beetles_summary_LFE <- c('LFE', mean(RC_rove_beetles$LFE$RC.ruzicka), bootstrap(RC_rove_beetles$LFE$RC.ruzicka))
+RC_rove_beetles_summary_VJR <- c('VJR', mean(RC_rove_beetles$VJR$RC.ruzicka), bootstrap(RC_rove_beetles$VJR$RC.ruzicka))
+RC_rove_beetles_summary_OG1 <- c('OG1', mean(RC_rove_beetles$OG1$RC.ruzicka), bootstrap(RC_rove_beetles$OG1$RC.ruzicka))
+RC_rove_beetles_summary_OG2 <- c('OG2', mean(RC_rove_beetles$OG2$RC.ruzicka), bootstrap(RC_rove_beetles$OG2$RC.ruzicka))
+RC_rove_beetles_summary_OG3 <- c('OG3', mean(RC_rove_beetles$OG3$RC.ruzicka), bootstrap(RC_rove_beetles$OG3$RC.ruzicka))
+
+## Combine these all into a dataframe
+RC_rove_beetles_summary <- as.data.frame(rbind(RC_rove_beetles_summary_A, RC_rove_beetles_summary_B, RC_rove_beetles_summary_C, RC_rove_beetles_summary_D, 
+                                               RC_rove_beetles_summary_E, RC_rove_beetles_summary_F, RC_rove_beetles_summary_LF1, RC_rove_beetles_summary_LF2, RC_rove_beetles_summary_LF3,
+                                               RC_rove_beetles_summary_LFE, RC_rove_beetles_summary_VJR, RC_rove_beetles_summary_OG1, RC_rove_beetles_summary_OG2, RC_rove_beetles_summary_OG3))
+
+RC_rove_beetles_summary
+
+# Rename column and row headings
+colnames(RC_rove_beetles_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(RC_rove_beetles_summary) = 1:14
+
+# Add mean ACD
+RC_rove_beetles_summary <- left_join(RC_rove_beetles_summary, ACD_rove_beetles_summary, by = "block")
+
+RC_rove_beetles_summary$mean <- as.numeric(RC_rove_beetles_summary$mean)
+RC_rove_beetles_summary$lower.95.quant <- as.numeric(RC_rove_beetles_summary$lower.95.quant)
+RC_rove_beetles_summary$upper.95.quant <- as.numeric(RC_rove_beetles_summary$upper.95.quant)
+
+RC_rove_beetles_summary$range <- RC_rove_beetles_summary$upper.95.quant - RC_rove_beetles_summary$lower.95.quant
+
+write.csv(RC_rove_beetles_summary, file = "Results/RC_rove_beetles_summary.csv")
+
+##### NTP - Neutral taxa percentage #####
+
+rove_beetles_composition_matrix <- as.data.frame(rove_beetles_composition_matrix)
+str(rove_beetles_composition_matrix)
+
+# Fit Sloan's neutral model
+SNM_rove_beetles <- iCAMP::snm.comm(comm = rove_beetles_composition_matrix, treat = Sites_rove_beetles)
+SNM_rove_beetles$stats
+
+NTP_rove_beetles_data <- SNM_rove_beetles$ratio.summary  %>% filter(index == "mean")
+NTP_rove_beetles_data <- NTP_rove_beetles_data  %>% dplyr :: select(index, treatment.id, Neutral.wt)
+
+NTP_rove_beetles_data <- NTP_rove_beetles_data %>% split(NTP_rove_beetles_data$treatment.id)
+
+
+NTP_rove_beetles_A <- c('A', NTP_rove_beetles_data$`A`$Neutral.wt, 
+                        quantile(SNM_rove_beetles$boot.detail$block$'A'$Neutral.wt, probs = 0.025), 
+                        quantile(SNM_rove_beetles$boot.detail$block$'A'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_B <- c('B', NTP_rove_beetles_data$`B`$Neutral.wt, 
+                        quantile(SNM_rove_beetles$boot.detail$block$'B'$Neutral.wt, probs = 0.025), 
+                        quantile(SNM_rove_beetles$boot.detail$block$'B'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_C <- c('C', NTP_rove_beetles_data$`C`$Neutral.wt, 
+                        quantile(SNM_rove_beetles$boot.detail$block$'C'$Neutral.wt, probs = 0.025), 
+                        quantile(SNM_rove_beetles$boot.detail$block$'C'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_D <- c('D', NTP_rove_beetles_data$`D`$Neutral.wt, 
+                        quantile(SNM_rove_beetles$boot.detail$block$'D'$Neutral.wt, probs = 0.025), 
+                        quantile(SNM_rove_beetles$boot.detail$block$'D'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_E <- c('E', NTP_rove_beetles_data$`E`$Neutral.wt, 
+                        quantile(SNM_rove_beetles$boot.detail$block$'E'$Neutral.wt, probs = 0.025), 
+                        quantile(SNM_rove_beetles$boot.detail$block$'E'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_F <- c('F', NTP_rove_beetles_data$`F`$Neutral.wt, 
+                        quantile(SNM_rove_beetles$boot.detail$block$'F'$Neutral.wt, probs = 0.025), 
+                        quantile(SNM_rove_beetles$boot.detail$block$'F'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_LF1 <- c('LF2', NTP_rove_beetles_data$`LF1`$Neutral.wt, 
+                          quantile(SNM_rove_beetles$boot.detail$block$'LF1'$Neutral.wt, probs = 0.025), 
+                          quantile(SNM_rove_beetles$boot.detail$block$'LF1'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_LF2 <- c('LF2', NTP_rove_beetles_data$`LF2`$Neutral.wt, 
+                          quantile(SNM_rove_beetles$boot.detail$block$'LF2'$Neutral.wt, probs = 0.025), 
+                          quantile(SNM_rove_beetles$boot.detail$block$'LF2'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_LF3 <- c('LF3', NTP_rove_beetles_data$`LF3`$Neutral.wt, 
+                          quantile(SNM_rove_beetles$boot.detail$block$'LF3'$Neutral.wt, probs = 0.025), 
+                          quantile(SNM_rove_beetles$boot.detail$block$'LF3'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_LFE <- c('LFE', NTP_rove_beetles_data$`LFE`$Neutral.wt, 
+                          quantile(SNM_rove_beetles$boot.detail$block$'LFE'$Neutral.wt, probs = 0.025), 
+                          quantile(SNM_rove_beetles$boot.detail$block$'LFE'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_VJR <- c('VJR', NTP_rove_beetles_data$`VJR`$Neutral.wt, 
+                          quantile(SNM_rove_beetles$boot.detail$block$'VJR'$Neutral.wt, probs = 0.025), 
+                          quantile(SNM_rove_beetles$boot.detail$block$'VJR'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_OG1 <- c('OG1', NTP_rove_beetles_data$`OG1`$Neutral.wt, 
+                          quantile(SNM_rove_beetles$boot.detail$block$'OG1'$Neutral.wt, probs = 0.025), 
+                          quantile(SNM_rove_beetles$boot.detail$block$'OG1'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_OG2 <- c('OG2', NTP_rove_beetles_data$`OG2`$Neutral.wt, 
+                          quantile(SNM_rove_beetles$boot.detail$block$'OG2'$Neutral.wt, probs = 0.025), 
+                          quantile(SNM_rove_beetles$boot.detail$block$'OG2'$Neutral.wt, probs = 0.975))
+NTP_rove_beetles_OG3 <- c('OG3', NTP_rove_beetles_data$`OG3`$Neutral.wt, 
+                          quantile(SNM_rove_beetles$boot.detail$block$'OG3'$Neutral.wt, probs = 0.025), 
+                          quantile(SNM_rove_beetles$boot.detail$block$'OG3'$Neutral.wt, probs = 0.975))
+
+NTP_rove_beetles_summary <- as.data.frame(rbind(NTP_rove_beetles_A, NTP_rove_beetles_B, NTP_rove_beetles_C, NTP_rove_beetles_D,
+                                                NTP_rove_beetles_E, NTP_rove_beetles_F, NTP_rove_beetles_LF1, NTP_rove_beetles_LF2, 
+                                                NTP_rove_beetles_LF3, NTP_rove_beetles_LFE, NTP_rove_beetles_VJR, NTP_rove_beetles_OG1, 
+                                                NTP_rove_beetles_OG2, NTP_rove_beetles_OG3))
+
+NTP_rove_beetles_summary
+
+
+# Rename column and row headings
+colnames(NTP_rove_beetles_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NTP_rove_beetles_summary) = 1:14
+
+# Add mean ACD
+NTP_rove_beetles_summary <- left_join(NTP_rove_beetles_summary, ACD_rove_beetles_summary, by = "block")
+
+str(NTP_rove_beetles_summary)
+NTP_rove_beetles_summary$mean <- as.numeric(NTP_rove_beetles_summary$mean)
+NTP_rove_beetles_summary$lower.95.quant <- as.numeric(NTP_rove_beetles_summary$lower.95.quant)
+NTP_rove_beetles_summary$upper.95.quant <- as.numeric(NTP_rove_beetles_summary$upper.95.quant)
+
+
+NTP_rove_beetles_summary$range <- NTP_rove_beetles_summary$upper.95.quant - NTP_rove_beetles_summary$lower.95.quant
+NTP_rove_beetles_summary 
+
+mean(NTP_rove_beetles_summary$mean)
+
+write.csv(NTP_rove_beetles_summary, file = "Results/NTP_rove_beetles_summary.csv")
+
+
+##### iCAMP - inferring community assembly mechanisms by phylogenetic bin-based null model analysis #####
+
+# Phylogeny
+beetles_taxa <- get_taxa(1323504)
+beetles_phylo <- get_phylogeny(1323504)
+rove_beetles_tips <-  intersect(beetles_phylo[["tip.labels"]], colnames(rove_beetles_composition_matrix))
+rove_beetles_phylo <- ape::keep.tip(beetles_phylo, rove_beetles_tips)
+rove_beetles_phylo$tip.labels <- NULL
+rove_beetles_phylo$node.labels <- NULL
+str(rove_beetles_phylo)
+rove_beetles_phylo
+
+# Root the tree
+rove_beetles_phylo_rooted <- phytools :: midpoint.root(rove_beetles_phylo)
+rove_beetles_phylo_rooted
+
+save.wd = "iCAMP outputs/Rove beetles iCAMP outputs_repeat"
+
+library(iCAMP)
+# Phylogenetic distance matrix
+pd.rove_beetles = pdist.big(tree = rove_beetles_phylo_rooted, wd=getwd(), nworker = 8, memory.G = 500)
+pd.rove_beetles
+
+# iCAMP
+iCAMP_rove_beetles = icamp.big(comm=rove_beetles_composition_matrix, pd.desc = pd.rove_beetles$pd.file, pd.spname=pd.rove_beetles$tip.label,
+                       pd.wd = save.wd, rand = 500, tree=rove_beetles_phylo_rooted,
+                       prefix = "Rove beetles", ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                       phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                       phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                       nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                       qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                       correct.special = TRUE, unit.sum = rowSums(rove_beetles_composition_matrix), special.method = "depend",
+                       ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+
+
+# Calculate mean of each process in each sampling block 
+iCAMP_rove_beetles_processes <- as.data.frame(iCAMP_rove_beetles$detail$processes)
+
+colnames(iCAMP_rove_beetles_processes)
+colnames(iCAMP_rove_beetles_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+colMeans(iCAMP_rove_beetles_processes[3:7])
+
+iCAMP_rove_beetles_processes <- tidyr::separate(iCAMP_rove_beetles_processes, sample2, into = c("block", "num")) 
+iCAMP_rove_beetles_processes
+
+#### Removing NAs
+iCAMP_rove_beetles_processes <- na.omit(iCAMP_rove_beetles_processes)
+
+library(dplyr)
+iCAMP_rove_beetles_processes_summary <- as.data.frame(iCAMP_rove_beetles_processes %>% group_by(block) %>% summarise(mean_HeS = mean(HeS),
+                                                                                                                     mean_HoS = mean(HoS), 
+                                                                                                                     mean_DL = mean(DL),
+                                                                                                                     mean_HoD = mean(HoD),
+                                                                                                                     mean_Dr = mean(Dr)))
+
+iCAMP_rove_beetles_processes_summary
+
+colMeans(iCAMP_rove_beetles_processes_summary[2:6])
+
+# Join with log ACD 
+iCAMP_rove_beetles_processes_summary <- left_join(iCAMP_rove_beetles_processes_summary, ACD_rove_beetles_summary, by = 'block')
+iCAMP_rove_beetles_processes_summary
+
+write.csv(iCAMP_rove_beetles_processes_summary, file = "Results/iCAMP_rove_beetles_processes_summary.csv")
+
+
+
+
+## Phylogenetic bins
+iCAMP_rove_beetles$detail$taxabin$state.united # the row numbering is the final bin ID, the 1st column is orginal bin IDs, the 2nd column is the taxa number in each final bin, the 3rd to 5th columns show the maximum, mean, and standard deviation of phylogenetic distances within each final bin
+iCAMP_rove_beetles$detail$taxabin$sp.bin # shows which species are in each bin
+
+## Plot tree and show bins
+ggtree(rove_beetles_phylo) +
+  geom_tiplab(size = 2.9) +
+  geom_nodelab(size = 2.9, nudge_x =-0.5, nudge_y = 1.2) +
+  geom_strip('Ps/Br1', 'Ps/Br9', barsize = 2, color = 'red', 
+             label = 'Bin 2', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Medo1', 'Medo8', barsize = 2, color = 'chartreuse3', 
+             label = 'Bin 3', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Edap1', 'Edap9', barsize = 2, color = 'purple', 
+             label = 'Bin 4', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Copr1', 'Copr9', barsize = 2, color = 'orange2', 
+             label = 'Bin 5', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Pino1', 'Pino9', barsize = 2, color = 'deeppink', 
+             label = 'Bin 6', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Zyras quadriterminalis', 'Zyra1', barsize = 2, color = 'aquamarine3', 
+             label = 'Bin 7', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Osor8', 'Anotylus uncifer', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Drusilla trina', 'Drus1', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  xlim(0,4.5) +
+  ggtitle("Rove beetles") +
+  theme(plot.margin = unit(c(0.1,0.1,0.5,0.1), "cm"),
+        plot.title = element_text(size = 15))
+
+ggsave("RoveBeetlesTree.pdf", width = 15, height = 55, units = "cm")
+
+
+#################################################################################################
+######################################### Scarabs ###############################################
+#################################################################################################
+
+## Scarab abundance data collected by Adam Sharp et al. https://doi.org/10.5281/zenodo.1323504 
+
+# Load the Scarab data
+scarabs <- load_safe_data(1323504, 'Scarabs')
+
+# Remove oil palm
+scarabs <- scarabs[ grep("OP", scarabs$site, invert = TRUE) , ] 
+
+# Construct community composition matrix
+count <- scarabs %>% group_by(site) %>% add_count(taxon)
+scarabs$Count <- count$n
+scarabs <- as.data.frame(scarabs %>% group_by(site) %>% distinct(taxon, .keep_all= TRUE)) # Remove repetition
+
+scarabs_composition_matrix <- create.matrix(scarabs,  tax.name = "taxon",  locality = "site", abund = TRUE, abund.col = "Count")
+scarabs_composition_matrix <- t(scarabs_composition_matrix)
+
+sum(colSums(scarabs_composition_matrix)) # number of individuals
+ncol(scarabs_composition_matrix) # number of species
+nrow(scarabs_composition_matrix) # number of sites
+
+## ACD - above-ground carbon density data derived from LiDAR by Swinfield et al., 2014 https://doi.org/10.5281/zenodo.4020697 
+# Select only sites that are in scarabs_composition_matrix
+ACD_scarabs <- subset(ACD_all, ACD_all$ID %in% rownames(scarabs_composition_matrix))
+
+# Calculate mean ACD
+ACD_scarabs <- separate(ACD_scarabs, ID, into = c("block", "num"), remove = FALSE)
+ACD_scarabs <- as.data.frame(ACD_scarabs %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+
+# Create summarised table to be used for plotting and regression
+ACD_scarabs_summary <- as.data.frame(ACD_scarabs %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+# Just sampling block names to be used for analysis
+Sites_scarabs <- subset(ACD_scarabs, select = c(ID, block))
+rownames(Sites_scarabs) <- Sites_scarabs[, 1]
+Sites_scarabs <- subset(Sites_scarabs, select = block)
+
+##### NST - normalised stochasticity ratio #####
+NST_scarabs <- tNST(scarabs_composition_matrix, Sites_scarabs, dist.method = "ruzicka", output.rand = TRUE, RC = TRUE)
+NST_scarabs$index.grp
+mean(NST_scarabs$index.grp$NST.i.ruzicka)
+
+NST_scarabs_summary <- subset(NST_scarabs$index.grp, select = c(group, NST.i.ruzicka))
+NST_scarabs_summary <- NST_scarabs_summary %>% split(NST_scarabs_summary$group) # Split so you can separately index each sampling block
+
+
+# Bootstrapping
+NST_scarabs_boot <- nst.boot(NST_scarabs, out.detail = TRUE, nworker = 2)
+NST_scarabs_boot
+
+# Taking the 95th quantiles of the bootstrapping list for each sampling block
+# The bootstrapping list is the results of each random draw
+NST_scarabs_boot$detail
+NST_scarabs_A <- c('A', NST_scarabs_summary$'A'$NST.i.ruzicka, 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'A', probs = 0.025), 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'A', probs = 0.975))
+NST_scarabs_B <- c('B', NST_scarabs_summary$'B'$NST.i.ruzicka, 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'B', probs = 0.025), 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'B', probs = 0.975))
+NST_scarabs_C <- c('C', NST_scarabs_summary$'C'$NST.i.ruzicka, 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'C', probs = 0.025), 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'C', probs = 0.975))
+NST_scarabs_D <- c('D', NST_scarabs_summary$'D'$NST.i.ruzicka, 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'D', probs = 0.025), 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'D', probs = 0.975))
+NST_scarabs_E <- c('E', NST_scarabs_summary$'E'$NST.i.ruzicka, 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'E', probs = 0.025), 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'E', probs = 0.975))
+NST_scarabs_F <- c('F', NST_scarabs_summary$'F'$NST.i.ruzicka, 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'F', probs = 0.025), 
+                   quantile(NST_scarabs_boot$detail$NST.boot$'F', probs = 0.975))
+NST_scarabs_LF1 <- c('LF1', NST_scarabs_summary$'LF1'$NST.i.ruzicka, 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'LF1', probs = 0.025), 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'LF1', probs = 0.975))
+NST_scarabs_LF2 <- c('LF2', NST_scarabs_summary$'LF2'$NST.i.ruzicka, 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'LF2', probs = 0.025), 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'LF2', probs = 0.975))
+NST_scarabs_LF3 <- c('LF3', NST_scarabs_summary$'LF3'$NST.i.ruzicka, 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'LF3', probs = 0.025), 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'LF3', probs = 0.975))
+NST_scarabs_LFE <- c('LFE', NST_scarabs_summary$'LFE'$NST.i.ruzicka, 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'LFE', probs = 0.025), 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'LFE', probs = 0.975))
+NST_scarabs_VJR <- c('VJR', NST_scarabs_summary$'VJR'$NST.i.ruzicka, 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'VJR', probs = 0.025), 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'VJR', probs = 0.975))
+NST_scarabs_OG1 <- c('OG1', NST_scarabs_summary$'OG1'$NST.i.ruzicka, 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'OG1', probs = 0.025), 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'OG1', probs = 0.975))
+NST_scarabs_OG2 <- c('OG2', NST_scarabs_summary$'OG2'$NST.i.ruzicka, 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'OG2', probs = 0.025), 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'OG2', probs = 0.975))
+NST_scarabs_OG3 <- c('OG3', NST_scarabs_summary$'OG3'$NST.i.ruzicka, 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'OG3', probs = 0.025), 
+                     quantile(NST_scarabs_boot$detail$NST.boot$'OG3', probs = 0.975))
+
+NST_scarabs_summary <- as.data.frame(rbind(NST_scarabs_A, NST_scarabs_B, NST_scarabs_C, NST_scarabs_D,
+                                           NST_scarabs_E, NST_scarabs_F, NST_scarabs_LF1, NST_scarabs_LF2, 
+                                           NST_scarabs_LF3, NST_scarabs_LFE, NST_scarabs_VJR, NST_scarabs_OG1,
+                                           NST_scarabs_OG2, NST_scarabs_OG3))
+
+colnames(NST_scarabs_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NST_scarabs_summary) = 1:14
+
+
+NST_scarabs_summary$mean <- as.numeric(NST_scarabs_summary$mean)
+NST_scarabs_summary$lower.95.quant <- as.numeric(NST_scarabs_summary$lower.95.quant)
+NST_scarabs_summary$upper.95.quant <- as.numeric(NST_scarabs_summary$upper.95.quant)
+
+NST_scarabs_summary <- left_join(NST_scarabs_summary, ACD_scarabs_summary, by = "block")
+
+NST_scarabs_summary$range <- NST_scarabs_summary$upper.95.quant - NST_scarabs_summary$lower.95.quant
+
+mean(NST_scarabs_summary$mean)
+
+#REMOVE VJR has NST = 0
+NST_scarabs_summary <- subset(NST_scarabs_summary, block != "VJR")
+
+
+
+write.csv(NST_scarabs_summary, file = "Results/NST_scarabs_summary.csv")
+
+
+##### RC - Raup-Crick #####
+
+RC_scarabs <- NST_scarabs$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+names(RC_scarabs)[names(RC_scarabs) == "name2"] <- "block_num"
+
+RC_scarabs <- separate(RC_scarabs, block_num, into = c("block", "num"))
+RC_scarabs$RC.ruzicka <- as.numeric(RC_scarabs$RC.ruzicka)
+
+# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
+RC_scarabs$RC.ruzicka <- abs(RC_scarabs$RC.ruzicka)
+
+# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
+RC_scarabs <- RC_scarabs %>% mutate(one_minus_RC = 1 - RC.ruzicka)
+# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
+names(RC_scarabs)[names(RC_scarabs) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
+names(RC_scarabs)[names(RC_scarabs) == "one_minus_RC"] <- "RC.ruzicka"
+
+str(RC_scarabs)
+
+## Calculate 95% quantiles by bootstrapping
+RC_scarabs <- RC_scarabs %>% select('block', 'RC.ruzicka') # Just need RC and block name
+RC_scarabs <- RC_scarabs %>% split( RC_scarabs$block) # Split so you can separately index each sampling block
+
+## Calculate mean and bootstrapped CIs for each sampling block
+RC_scarabs_summary_A <- c('A', mean(RC_scarabs$A$RC.ruzicka), bootstrap(RC_scarabs$A$RC.ruzicka))
+RC_scarabs_summary_B <- c('B', mean(RC_scarabs$B$RC.ruzicka), bootstrap(RC_scarabs$B$RC.ruzicka))
+RC_scarabs_summary_C <- c('C', mean(RC_scarabs$C$RC.ruzicka), bootstrap(RC_scarabs$C$RC.ruzicka))
+RC_scarabs_summary_D <- c('D', mean(RC_scarabs$D$RC.ruzicka), bootstrap(RC_scarabs$D$RC.ruzicka))
+RC_scarabs_summary_E <- c('E', mean(RC_scarabs$E$RC.ruzicka), bootstrap(RC_scarabs$E$RC.ruzicka))
+RC_scarabs_summary_F <- c('F', mean(RC_scarabs$F$RC.ruzicka), bootstrap(RC_scarabs$F$RC.ruzicka))
+RC_scarabs_summary_LF1 <- c('LF1', mean(RC_scarabs$LF1$RC.ruzicka), bootstrap(RC_scarabs$LF1$RC.ruzicka))
+RC_scarabs_summary_LF2 <- c('LF2', mean(RC_scarabs$LF2$RC.ruzicka), bootstrap(RC_scarabs$LF2$RC.ruzicka))
+RC_scarabs_summary_LF3 <- c('LF3', mean(RC_scarabs$LF3$RC.ruzicka), bootstrap(RC_scarabs$LF3$RC.ruzicka))
+RC_scarabs_summary_LFE <- c('LFE', mean(RC_scarabs$LFE$RC.ruzicka), bootstrap(RC_scarabs$LFE$RC.ruzicka))
+RC_scarabs_summary_VJR <- c('VJR', mean(RC_scarabs$VJR$RC.ruzicka), bootstrap(RC_scarabs$VJR$RC.ruzicka))
+RC_scarabs_summary_OG1 <- c('OG1', mean(RC_scarabs$OG1$RC.ruzicka), bootstrap(RC_scarabs$OG1$RC.ruzicka))
+RC_scarabs_summary_OG2 <- c('OG2', mean(RC_scarabs$OG2$RC.ruzicka), bootstrap(RC_scarabs$OG2$RC.ruzicka))
+RC_scarabs_summary_OG3 <- c('OG3', mean(RC_scarabs$OG3$RC.ruzicka), bootstrap(RC_scarabs$OG3$RC.ruzicka))
+
+## Combine these all into a dataframe
+RC_scarabs_summary <- as.data.frame(rbind(RC_scarabs_summary_A, RC_scarabs_summary_B, RC_scarabs_summary_C, RC_scarabs_summary_D, 
+                                          RC_scarabs_summary_E, RC_scarabs_summary_F, RC_scarabs_summary_LF1, RC_scarabs_summary_LF2, RC_scarabs_summary_LF3,
+                                          RC_scarabs_summary_LFE, RC_scarabs_summary_VJR, RC_scarabs_summary_OG1, RC_scarabs_summary_OG2, RC_scarabs_summary_OG3))
+
+RC_scarabs_summary
+
+# Rename column and row headings
+colnames(RC_scarabs_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(RC_scarabs_summary) = 1:14
+
+# Add mean ACD
+RC_scarabs_summary <- left_join(RC_scarabs_summary, ACD_scarabs_summary, by = "block")
+
+RC_scarabs_summary$mean <- as.numeric(RC_scarabs_summary$mean)
+RC_scarabs_summary$lower.95.quant <- as.numeric(RC_scarabs_summary$lower.95.quant)
+RC_scarabs_summary$upper.95.quant <- as.numeric(RC_scarabs_summary$upper.95.quant)
+RC_scarabs_summary$range <- RC_scarabs_summary$upper.95.quant - RC_scarabs_summary$lower.95.quant
+
+mean(RC_scarabs_summary$mean)
+
+write.csv(RC_scarabs_summary, file = "Results/RC_scarabs_summary.csv")
+
+
+##### iCAMP - inferring community assembly mechanisms by phylogenetic bin-based null model analysis #####
+
+# Phylogeny
+beetles_phylo <- safedata::get_phylogeny(1323504)
+scarabs_tips <-  intersect(beetles_phylo[["tip.labels"]], colnames(scarabs_composition_matrix))
+scarabs_phylo <- ape::keep.tip(beetles_phylo, scarabs_tips)
+scarabs_phylo$tip.labels <- NULL
+scarabs_phylo$node.labels <- NULL
+
+# Root the tree
+scarabs_phylo_rooted <- phytools::midpoint.root(scarabs_phylo)
+scarabs_phylo_rooted
+
+
+#  Phylogenetic distance matrix.
+save.wd = "iCAMP outputs/Scarabs iCAMP outputs"
+
+
+# Phylogenetic distance matrix
+pd.scarabs = pdist.big(tree = scarabs_phylo_rooted, wd=save.wd, nworker = 8, memory.G = 500)
+
+# iCAMP
+iCAMP_scarabs =iCAMP::icamp.big(comm=scarabs_composition_matrix, pd.desc = pd.scarabs$pd.file, pd.spname=pd.scarabs$tip.label,
+                             pd.wd = save.wd, rand = 500, tree=scarabs_phylo_rooted,
+                             prefix = 'scarabs', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                             phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                             phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                             nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                             qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                             correct.special = TRUE, unit.sum = rowSums(scarabs_composition_matrix), special.method = "depend",
+                             ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+
+
+# Calculate mean of each process in each sampling block 
+iCAMP_scarabs_processes <- as.data.frame(iCAMP_scarabs$detail$processes)
+
+colnames(iCAMP_scarabs_processes)
+colMeans(iCAMP_scarabs_processes[3:7])
+
+colnames(iCAMP_scarabs_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+
+iCAMP_scarabs_processes <- separate(iCAMP_scarabs_processes, sample2, into = c("block", "num")) 
+
+iCAMP_scarabs_processes_summary <- as.data.frame(iCAMP_scarabs_processes %>% group_by(block) %>% summarise(mean_HeS = mean(HeS),
+                                                                                                           mean_HoS = mean(HoS), 
+                                                                                                           mean_DL = mean(DL),
+                                                                                                           mean_HoD = mean(HoD),
+                                                                                                           mean_Dr = mean(Dr)))
+
+colMeans(iCAMP_scarabs_processes_summary[2:6])
+
+# Join with log ACD 
+iCAMP_scarabs_processes_summary
+ACD_scarabs_summary
+iCAMP_scarabs_processes_summary <- left_join(iCAMP_scarabs_processes_summary, ACD_scarabs_summary, by = 'block')
+iCAMP_scarabs_processes_summary
+
+write.csv(iCAMP_scarabs_processes_summary, file = "Results/iCAMP_scarabs_processes_summary.csv")
+
+## Phylogenetic bins
+
+iCAMP_scarabs$detail$taxabin$state.united$bin.united.tax.num # number of taxa in each bin
+iCAMP_scarabs$detail$taxabin$sp.bin # shows which species are in each bin
+
+## Plot tree and show bins
+ggtree(scarabs_phylo) +
+  geom_tiplab(size = 3) +
+  geom_nodelab(size = 3, nudge_x =-0.5, nudge_y = 0.5) +
+  geom_strip('Proagoderus watanabei', 'Onthophagus wallacei', barsize = 2, color = 'red', 
+             label = 'Bin 2', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Mericserica oberthuri', 'Nematophylla carinicollis', barsize = 2, color = 'chartreuse3', 
+             label = 'Bin 3', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Mala1', 'Maladera spissa', barsize = 2, color = 'chartreuse3', 
+             label = 'Bin 3', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Apogonia buttikoferi', 'Apogonia sericea', barsize = 2, color = 'purple', 
+             label = 'Bin 4', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Microphaeochroops varius', 'Madrasostes variolosum', barsize = 2, color = 'orange2', 
+             label = 'Bin 5', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Aegus striatipennis', 'Pelopides monticulosus', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  xlim(0,5) +
+  ggtitle("Scarabs") +
+  theme(plot.margin = unit(c(0.1,0.1,0.5,0.1), "cm"),
+        plot.title = element_text(size = 15))
+ggsave("ScarabsTree.pdf", width = 15, height = 55, units = "cm")
+
+
