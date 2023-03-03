@@ -1,0 +1,112 @@
+
+#### beta regression 
+# single categorical predictor - generalist vs specialist
+# beta regression because response variable is bounded between zero and one
+
+##### NST ------------------------------------------------------------------------
+
+NST_ants_summary <- read.csv("Results/NST_ants_summary.csv")
+NST_moths_summary <- read.csv("Results/NST_moths_summary.csv")
+NST_orthoptera_summary <- read.csv("Results/NST_orthoptera_summary.csv")
+NST_rove_beetles_summary <- read.csv("Results/NST_rove_beetles_summary.csv")
+NST_scarabs_summary <- read.csv("Results/NST_scarabs_summary.csv")
+NST_spiders_summary <- read.csv("Results/NST_spiders_summary.csv")
+NST_weevils_summary <- read.csv("Results/NST_weevils_summary.csv")
+
+NST_ants_summary$taxa <- 'Ants'
+NST_moths_summary$taxa <- 'Moths'
+NST_orthoptera_summary$taxa <- 'Orthoptera'
+NST_rove_beetles_summary$taxa <- 'Rove beetles'
+NST_scarabs_summary$taxa <- 'Scarabs'
+NST_spiders_summary$taxa <- 'Spiders'
+NST_weevils_summary$taxa <- 'Weevils'
+
+
+NST_ants_summary$group <- 'Generalists'
+NST_moths_summary$group <- 'Specialists'
+NST_orthoptera_summary$group <- 'Specialists'
+NST_rove_beetles_summary$group <- 'Generalists'
+NST_scarabs_summary$group <- 'Specialists'
+NST_spiders_summary$group <- 'Specialists'
+NST_weevils_summary$group <- 'Specialists'
+
+
+NST_all_summary <- rbind(NST_ants_summary, NST_moths_summary, NST_orthoptera_summary, NST_rove_beetles_summary, 
+                         NST_scarabs_summary, NST_spiders_summary, NST_weevils_summary)
+
+library(betareg)
+NST_generalist_specialist_betareg <- betareg(mean ~ group, NST_all_summary)
+summary(NST_generalist_specialist_betareg)
+plot(NST_generalist_specialist_betareg)
+
+
+##### RC ------------------------------------------------------------------------
+
+RC_ants_summary <- read.csv("Results/RC_ants_summary.csv")
+RC_moths_summary <- read.csv("Results/RC_moths_summary.csv")
+RC_orthoptera_summary <- read.csv("Results/RC_orthoptera_summary.csv")
+RC_rove_beetles_summary <- read.csv("Results/RC_rove_beetles_summary.csv")
+RC_scarabs_summary <- read.csv("Results/RC_scarabs_summary.csv")
+RC_spiders_summary <- read.csv("Results/RC_spiders_summary.csv")
+RC_weevils_summary <- read.csv("Results/RC_weevils_summary.csv")
+
+RC_ants_summary$taxa <- 'Ants'
+RC_moths_summary$taxa <- 'Moths'
+RC_orthoptera_summary$taxa <- 'Orthoptera'
+RC_rove_beetles_summary$taxa <- 'Rove beetles'
+RC_scarabs_summary$taxa <- 'Scarabs'
+RC_spiders_summary$taxa <- 'Spiders'
+RC_weevils_summary$taxa <- 'Weevils'
+
+
+RC_ants_summary$group <- 'Generalists'
+RC_moths_summary$group <- 'Specialists'
+RC_orthoptera_summary$group <- 'Specialists'
+RC_rove_beetles_summary$group <- 'Generalists'
+RC_scarabs_summary$group <- 'Specialists'
+RC_spiders_summary$group <- 'Specialists'
+RC_weevils_summary$group <- 'Specialists'
+
+RC_all_summary <- rbind(RC_ants_summary, RC_moths_summary, RC_orthoptera_summary, RC_rove_beetles_summary, 
+                        RC_scarabs_summary, RC_spiders_summary, RC_weevils_summary)
+
+
+
+library(betareg)
+RC_generalist_specialist_betareg <- betareg(mean ~ group, RC_all_summary)
+summary(RC_generalist_specialist_betareg)
+plot(RC_generalist_specialist_betareg)
+
+
+##### NTP -----------------------------------------------------------------------
+
+NTP_ants_summary <- read.csv("Results/NTP_ants_summary.csv")
+NTP_moths_summary <- read.csv("Results/NTP_moths_summary.csv")
+NTP_orthoptera_summary <- read.csv("Results/NTP_orthoptera_summary.csv")
+NTP_rove_beetles_summary <- read.csv("Results/NTP_rove_beetles_summary.csv")
+NTP_spiders_summary <- read.csv("Results/NTP_spiders_summary.csv")
+NTP_weevils_summary <- read.csv("Results/NTP_weevils_summary.csv")
+
+NTP_ants_summary$taxa <- 'Ants'
+NTP_moths_summary$taxa <- 'Moths'
+NTP_orthoptera_summary$taxa <- 'Orthoptera'
+NTP_rove_beetles_summary$taxa <- 'Rove beetles'
+NTP_spiders_summary$taxa <- 'Spiders'
+NTP_weevils_summary$taxa <- 'Weevils'
+
+
+NTP_ants_summary$group <- 'Generalists'
+NTP_moths_summary$group <- 'Specialists'
+NTP_orthoptera_summary$group <- 'Specialists'
+NTP_rove_beetles_summary$group <- 'Generalists'
+NTP_spiders_summary$group <- 'Specialists'
+NTP_weevils_summary$group <- 'Specialists'
+
+
+NTP_all_summary <- rbind(NTP_ants_summary, NTP_moths_summary, NTP_orthoptera_summary, NTP_rove_beetles_summary, 
+                         NTP_spiders_summary, NTP_weevils_summary)
+
+library(betareg)
+NTP_generalist_specialist_betareg <- betareg(mean ~ group, NTP_all_summary)
+summary(NTP_generalist_specialist_betareg)
+plot(NTP_generalist_specialist_betareg)
