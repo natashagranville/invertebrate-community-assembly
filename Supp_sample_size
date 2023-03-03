@@ -1,0 +1,154 @@
+########## Average number of sites per block -----------------------------------
+
+library(tidyr)
+library(dplyr)
+
+ants_sites <- data.frame(site = rownames(ants_composition_matrix))
+ants_sites <- separate(ants_sites , site, into = c("block", "num")) # separate into block and site
+ants_sites_per_block <- ants_sites %>% group_by(block) %>% summarise(sites_per_block = n()) # calculate number of sites per block 
+ants_sites_per_block$taxon <- 'ants'
+
+moths_sites <- data.frame(site = rownames(moths_composition_matrix))
+moths_sites <- separate(moths_sites , site, into = c("block", "num")) # separate into block and site
+moths_sites_per_block <- moths_sites %>% group_by(block) %>% summarise(sites_per_block = n()) # calculate number of sites per block 
+moths_sites_per_block$taxon <- 'moths'
+
+orthoptera_sites <- data.frame(site = rownames(orthoptera_composition_matrix))
+orthoptera_sites <- separate(orthoptera_sites , site, into = c("block", "num")) 
+orthoptera_sites_per_block <- orthoptera_sites %>% group_by(block) %>% summarise(sites_per_block = n()) 
+orthoptera_sites_per_block$taxon <- 'orthoptera'
+orthoptera_sites_per_block
+
+rove_beetles_sites <- data.frame(site = rownames(rove_beetles_composition_matrix))
+rove_beetles_sites <- separate(rove_beetles_sites , site, into = c("block", "num")) 
+rove_beetles_sites_per_block <- rove_beetles_sites %>% group_by(block) %>% summarise(sites_per_block = n()) 
+rove_beetles_sites_per_block$taxon <- 'rove_beetles'
+
+scarabs_sites <- data.frame(site = rownames(scarabs_composition_matrix))
+scarabs_sites <- separate(scarabs_sites , site, into = c("block", "num")) 
+scarabs_sites_per_block <- scarabs_sites %>% group_by(block) %>% summarise(sites_per_block = n()) 
+scarabs_sites_per_block$taxon <- 'scarabs'
+
+spiders_sites <- data.frame(site = rownames(spiders_composition_matrix))
+spiders_sites <- separate(spiders_sites , site, into = c("block", "num")) 
+spiders_sites_per_block <- spiders_sites %>% group_by(block) %>% summarise(sites_per_block = n())  
+spiders_sites_per_block$taxon <- 'spiders'
+
+weevils_sites <- data.frame(site = rownames(weevils_composition_matrix))
+weevils_sites <- separate(weevils_sites , site, into = c("block", "num")) 
+weevils_sites_per_block <- weevils_sites %>% group_by(block) %>% summarise(sites_per_block = n()) 
+weevils_sites_per_block$taxon <- 'weevils'
+
+sites_per_block <- rbind(ants_sites_per_block, moths_sites_per_block, orthoptera_sites_per_block, rove_beetles_sites_per_block,
+                         scarabs_sites_per_block, spiders_sites_per_block, weevils_sites_per_block)
+
+# Summary stats to report in methods
+min(sites_per_block$sites_per_block)
+max(sites_per_block$sites_per_block)
+mean(sites_per_block$sites_per_block)
+
+########## Supplementarry figure for sampling size -------------------------------
+
+# Create separate data frames for each taxon to show how many sites there are in each sampling block 
+# Taxa that are not sampled in all 14  blocks (ants, orthoptera, spiders) will have NA for the blocks in which they were not sampled
+
+Sites_rove_beetles_n <- as.data.frame(Sites_rove_beetles %>% group_by(block) %>% add_count(block) %>% distinct(block, .keep_all= TRUE)) %>% rename(num_sites_rove_beetles = n)
+
+Sites_moths_n <- as.data.frame(Sites_moths %>% group_by(block) %>% add_count(block) %>% distinct(block, .keep_all= TRUE)) %>% rename(num_sites_moths = n)
+
+Sites_weevils_n <- as.data.frame(Sites_weevils %>% group_by(block) %>% add_count(block) %>% distinct(block, .keep_all= TRUE)) %>% rename(num_sites_weevils = n)
+
+Sites_scarabs_n <- as.data.frame(Sites_scarabs %>% group_by(block) %>% add_count(block) %>% distinct(block, .keep_all= TRUE)) %>% rename(num_sites_scarabs = n)
+
+Sites_ants_n <- as.data.frame(Sites_ants %>% group_by(block) %>% add_count(block) %>% distinct(block, .keep_all= TRUE)) %>% rename(num_sites_ants = n)
+Sites_ants_n <- left_join(Sites_rove_beetles_n, Sites_ants_n, by = 'block') %>% select(c(block, num_sites_ants)) %>% rename(n = num_sites_ants)
+
+Sites_orthoptera_n <- as.data.frame(Sites_orthoptera %>% group_by(block) %>% add_count(block) %>% distinct(block, .keep_all= TRUE)) %>% rename(num_sites_orthoptera = n)
+Sites_orthoptera_n <- left_join(Sites_rove_beetles_n, Sites_orthoptera_n, by = 'block') %>% select(c(block, num_sites_orthoptera)) %>% rename(n = num_sites_orthoptera)
+
+Sites_spiders_n <- as.data.frame(Sites_spiders %>% group_by(block) %>% add_count(block) %>% distinct(block, .keep_all= TRUE)) %>% rename(num_sites_spiders = n)
+Sites_spiders_n <- left_join(Sites_rove_beetles_n, Sites_spiders_n, by = 'block') %>% select(c(block, num_sites_spiders)) %>% rename(n = num_sites_spiders)
+
+Sites_rove_beetles_n <- Sites_rove_beetles_n %>% rename(n = num_sites_rove_beetles)
+Sites_scarabs_n <- Sites_scarabs_n %>% rename(n = num_sites_scarabs)
+Sites_weevils_n <- Sites_weevils_n %>% rename(n = num_sites_weevils)
+Sites_moths_n <- Sites_moths_n %>% rename(n = num_sites_moths)
+
+# Add column for taxa name
+Sites_ants_n$taxon <- 'Ants'
+Sites_orthoptera_n$taxon <- 'Orthoptera'
+Sites_rove_beetles_n$taxon <- 'Rove beetles'
+Sites_scarabs_n$taxon <- 'Scarabs'
+Sites_spiders_n$taxon <- 'Spiders'
+Sites_weevils_n$taxon <- 'Weevils'
+Sites_moths_n$taxon <- 'Moths'
+
+# rbind data frames together
+Sites_all_n <- rbind(Sites_ants_n, Sites_orthoptera_n, Sites_moths_n, Sites_rove_beetles_n, Sites_scarabs_n, Sites_spiders_n, Sites_weevils_n)
+Sites_all_n 
+
+# Plot
+colours <-  c('#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',  'grey',   '#E31A1C', '#6A3D9A')
+shapes <-  c(16, 17, 15, 16, 18, 17, 15)
+block_order <- c('E', 'C', 'A', 'D', 'B', 'F', 'LF1', 'LFE', 'LF2', 'LF3', 'OG3', 'VJR', 'OG1', 'OG2') # see below for how this order was calculated
+
+library(ggplot2)
+sample_size_plot <- ggplot(data = Sites_all_n, aes(x = block, y = taxon, size = n, colour = taxon, shape = taxon)) + 
+  geom_point() +
+  scale_y_discrete(limits=rev) + 
+  scale_x_discrete(limits = block_order) +
+  xlab('Sampling block') + ylab('') +
+  scale_colour_manual(values = colours) +
+  scale_shape_manual(values = shapes) +
+  theme_classic() +
+  theme(axis.text.y=element_text(size=20), 
+        axis.text.x=element_text(size=17), 
+        axis.title=element_text(size=20),
+        legend.text=element_text(size=20), 
+        legend.title = element_text(size = 20),
+        plot.margin = margin(0.2,0.2,1,0.2, 'cm'))  +
+  guides(shape = 'none', colour = 'none', size = guide_legend(title  = 'Number of sites')) +
+  geom_segment(x=1, xend = 14, y = -0.25, yend = -0.25, lineend = 'round', linejoin = 'round', size = 1, linetype = 'solid',colour = 'black',arrow = arrow()) + 
+  annotate('text', x = 11.5, y = -0.34, label = "Decreasing logging intensity", colour = 'black', size = 5.5) + 
+  coord_cartesian(ylim = c(1, 7), xlim = c(1, 14), clip = "off") 
+
+sample_size_plot
+
+
+
+### calculate order of blocks
+# Order x axis by increasing ACD
+ACD_ants_summary_ordered <- ACD_ants_summary[order(ACD_ants_summary$Mean_logACD),]
+ACD_ants_summary_ordered
+
+ACD_orthoptera_summary_ordered <- ACD_orthoptera_summary[order(ACD_orthoptera_summary$Mean_logACD),]
+ACD_orthoptera_summary_ordered
+
+ACD_rove_beetles_summary_ordered <- ACD_rove_beetles_summary[order(ACD_rove_beetles_summary$Mean_logACD),]
+ACD_rove_beetles_summary_ordered
+
+ACD_scarabs_summary_ordered <- ACD_scarabs_summary[order(ACD_scarabs_summary$Mean_logACD),]
+ACD_scarabs_summary_ordered
+
+ACD_spiders_summary_ordered <- ACD_spiders_summary[order(ACD_spiders_summary$Mean_logACD),]
+ACD_spiders_summary_ordered
+
+ACD_weevils_summary_ordered <- ACD_weevils_summary[order(ACD_weevils_summary$Mean_logACD),]
+ACD_weevils_summary_ordered
+
+# calculating min and max for writing in methods
+
+#  taking inverse of base-10 log
+min(ACD_ants_summary_ordered$mean_ACD <- 10^ACD_ants_summary_ordered$Mean_logACD)
+min(ACD_orthoptera_summary_ordered$mean_ACD <- 10^ACD_orthoptera_summary_ordered$Mean_logACD)
+min(ACD_rove_beetles_summary_ordered$mean_ACD <- 10^ACD_rove_beetles_summary_ordered$Mean_logACD)
+min(ACD_scarabs_summary_ordered$mean_ACD <- 10^ACD_scarabs_summary_ordered$Mean_logACD)
+min(ACD_spiders_summary_ordered$mean_ACD <- 10^ACD_spiders_summary_ordered$Mean_logACD)
+min(ACD_weevils_summary_ordered$mean_ACD <- 10^ACD_weevils_summary_ordered$Mean_logACD)
+
+max(ACD_ants_summary_ordered$mean_ACD <- 10^ACD_ants_summary_ordered$Mean_logACD)
+max(ACD_orthoptera_summary_ordered$mean_ACD <- 10^ACD_orthoptera_summary_ordered$Mean_logACD)
+max(ACD_rove_beetles_summary_ordered$mean_ACD <- 10^ACD_rove_beetles_summary_ordered$Mean_logACD)
+max(ACD_scarabs_summary_ordered$mean_ACD <- 10^ACD_scarabs_summary_ordered$Mean_logACD)
+max(ACD_spiders_summary_ordered$mean_ACD <- 10^ACD_spiders_summary_ordered$Mean_logACD)
+max(ACD_weevils_summary_ordered$mean_ACD <- 10^ACD_weevils_summary_ordered$Mean_logACD)
