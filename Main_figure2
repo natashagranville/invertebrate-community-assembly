@@ -1,0 +1,550 @@
+
+
+iCAMP_ants_processes_summary <- read.csv("Results/iCAMP_ants_processes_summary.csv")
+iCAMP_moths_processes_summary <- read.csv("Results/iCAMP_moths_processes_summary.csv")
+iCAMP_orthoptera_processes_summary <- read.csv("Results/iCAMP_orthoptera_processes_summary.csv")
+iCAMP_spiders_processes_summary <- read.csv("Results/iCAMP_spiders_processes_summary.csv")
+iCAMP_scarabs_processes_summary <- read.csv("Results/iCAMP_scarabs_processes_summary.csv")
+iCAMP_rove_beetles_processes_summary <- read.csv("Results/iCAMP_rove_beetles_processes_summary.csv")
+iCAMP_weevils_processes_summary <- read.csv("Results/iCAMP_weevils_processes_summary.csv")
+
+iCAMP_ants_processes_summary$Taxa <- 'Ants'
+iCAMP_moths_processes_summary$Taxa <- 'Moths'
+iCAMP_orthoptera_processes_summary$Taxa <- 'Orthoptera'
+iCAMP_spiders_processes_summary$Taxa <- 'Spiders'
+iCAMP_weevils_processes_summary$Taxa <- 'Weevils'
+iCAMP_rove_beetles_processes_summary$Taxa <- 'Rove beetles'
+iCAMP_scarabs_processes_summary$Taxa <- 'Scarabs'
+
+
+iCAMP_all_processes_summary <- as.data.frame(rbind(iCAMP_ants_processes_summary, iCAMP_moths_processes_summary, iCAMP_orthoptera_processes_summary, iCAMP_spiders_processes_summary,
+                                                   iCAMP_weevils_processes_summary, iCAMP_rove_beetles_processes_summary, iCAMP_scarabs_processes_summary))
+
+iCAMP_all_processes_summary
+
+
+##### Dirichlet regression with HeS as ref category ----------------------------
+library(DirichletReg)
+
+# Create separate dataframe for the transformed responses
+iCAMP_all_processes_summary_DR <- iCAMP_all_processes_summary
+
+# Transform response variables
+iCAMP_all_processes_summary_DR$Y <- DR_data(iCAMP_all_processes_summary[, c('mean_HeS', 'mean_HoS', 'mean_DL', 'mean_HoD', 'mean_Dr')], base = 1)
+iCAMP_all_processes_summary_DR
+
+# Dirichlet regression
+iCAMP_all_processes_summary_DR$Taxa <- as.factor(iCAMP_all_processes_summary_DR$Taxa)
+iCAMP_all_DirichReg <- DirichReg(Y ~ Mean_logACD*Taxa, data = iCAMP_all_processes_summary_DR,  model = "alternative")
+summary(iCAMP_all_DirichReg)
+
+
+# Extract the relevant info for plotting slopes and CIs
+HoS_coefs
+HoS_coefs <- confint(iCAMP_all_DirichReg)[[3]]$beta$mean_HoS # these are the slopes
+HoS_slope_ants <- iCAMP_slopes_ants[2,2]
+HoS_slope_moths <- HoS_coefs[2]
+HoS_slope_orthoptera <- HoS_coefs[2] +  HoS_coefs[8]
+HoS_slope_rove_beetles <- HoS_coefs[2] +  HoS_coefs[9]
+HoS_slope_scarabs <- HoS_coefs[2] +  HoS_coefs[10]
+HoS_slope_spiders <- HoS_coefs[2] +  HoS_coefs[11]
+HoS_slope_weevils <- HoS_coefs[2] +  HoS_coefs[12]
+
+HoS_LCI <- confint(iCAMP_all_DirichReg)[[7]][[1]]$mean_HoS[,1] # these are the lower 95CIs of the slopes
+HoS_UCI_ants <- iCAMP_slopes_ants[2,3]
+HoS_LCI_moths <- HoS_LCI[2]
+HoS_LCI_orthoptera <- HoS_LCI[2] +  HoS_LCI[8]
+HoS_LCI_rove_beetles <- HoS_LCI[2] +  HoS_LCI[9]
+HoS_LCI_scarabs <- HoS_LCI[2] + HoS_LCI[10]
+HoS_LCI_spiders <- HoS_LCI[2]  + HoS_LCI[11]
+HoS_LCI_weevils <- HoS_LCI[2]  + HoS_LCI[12]
+
+HoS_UCI <- confint(iCAMP_all_DirichReg)[[7]][[1]]$mean_HoS[,2] # these are the upper 95CIs of the slopes
+HoS_LCI_ants <- iCAMP_slopes_ants[2,4] 
+HoS_UCI_moths <- HoS_UCI[2]
+HoS_UCI_orthoptera <- HoS_UCI[2] + HoS_UCI[8]
+HoS_UCI_rove_beetles <- HoS_UCI[2] + HoS_UCI[9]
+HoS_UCI_scarabs <- HoS_UCI[2] + HoS_UCI[10]
+HoS_UCI_spiders <- HoS_UCI[2]  + HoS_UCI[11]
+HoS_UCI_weevils <- HoS_UCI[2]  + HoS_UCI[12]
+
+HoS_summary <- data.frame(taxon = c('Ants', 'Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders', 'Weevils'), 
+           slope = c(HoS_slope_ants, HoS_slope_moths, HoS_slope_orthoptera, HoS_slope_rove_beetles, HoS_slope_scarabs, HoS_slope_spiders, HoS_slope_weevils),
+           lci = c(HoS_LCI_ants, HoS_LCI_moths, HoS_LCI_orthoptera, HoS_LCI_rove_beetles, HoS_LCI_scarabs, HoS_LCI_spiders, HoS_LCI_weevils),
+           uci = c(HoS_UCI_ants, HoS_UCI_moths, HoS_UCI_orthoptera, HoS_UCI_rove_beetles, HoS_UCI_scarabs, HoS_UCI_spiders, HoS_UCI_weevils))
+HoS_summary$process <- 'Homogeneous selection'
+HoS_summary
+
+
+weighted_mean_slope <- function(data) { # data is the mean, lci and uci of slope for each taxa for one process
+  
+  # vi = 'within-study variance'  = range of 95% confidence intervals for each taxa
+  # wi = weight = 1/vi
+  # slope = 'effect size' = mean slope for each taxa
+  # Mean = weighted mean = the overall weighted mean slope for this process (what we're trying to calculate)
+  # SE = standard error
+  # LCI = lower confidence interval
+  # UCI = upper confidence interval
+  
+  # 1. Calculate within-study variance (vi)
+  data$vi <- data$uci - data$lci
+  # 2. Calculate weights (wi). 
+  data$wi <- 1/data$vi
+  # 2a. wi will be infinity if the mean_slope is 0. Replacing infinities with 0. 
+  is.na(data)<-sapply(data, is.infinite)
+  data[is.na(data)]<-0
+  # 3. Calculate overall weighted mean
+  Mean <- sum(data$wi * data$slope) / sum(data$wi) 
+  # 4. Calculate SE of overall weighted mean
+  SE <- sqrt(1/sum(data$wi))
+  # 5. Calculate 95% confidence intervals of overall weighted mean - CAN THIS BE CHANGED TO BOOTSTRAPPED 95% QUANTILES TO PREVENT THEM BEING NEGATIVE
+  LCI <- Mean - (1.96 * SE)
+  UCI <- Mean + (1.96 * SE)
+  
+  return(c(Mean, LCI, UCI))
+}
+
+
+HoS_summary <- rbind(HoS_summary, c('All', weighted_mean_slope(HoS_summary), 'Homogeneous selection'))
+HoS_summary
+
+
+DL_coefs <- confint(iCAMP_all_DirichReg)[[3]]$beta$mean_DL # these are the slopes
+DL_slope_ants <- iCAMP_slopes_ants[3,2]
+DL_slope_moths <- DL_coefs[2]
+DL_slope_orthoptera <- DL_coefs[2] +  DL_coefs[8]
+DL_slope_rove_beetles <- DL_coefs[2] +  DL_coefs[9]
+DL_slope_scarabs <- DL_coefs[2] +  DL_coefs[10]
+DL_slope_spiders <- DL_coefs[2] +  DL_coefs[11]
+DL_slope_weevils <- DL_coefs[2] + DL_coefs[12]
+
+DL_LCI <- confint(iCAMP_all_DirichReg)[[7]][[1]]$mean_DL[,1] # these are the lower 95CIs of the slopes
+DL_LCI_ants <- iCAMP_slopes_ants[3,3]
+DL_LCI_moths <- DL_LCI[2]
+DL_LCI_orthoptera <- DL_LCI[2] + DL_LCI[8]
+DL_LCI_rove_beetles <- DL_LCI[2]  + DL_LCI[9]
+DL_LCI_scarabs <- DL_LCI[2] + DL_LCI[10]
+DL_LCI_spiders <- DL_LCI[2]  + DL_LCI[11]
+DL_LCI_weevils <- DL_LCI[2]  + DL_LCI[12]
+
+DL_UCI <- confint(iCAMP_all_DirichReg)[[7]][[1]]$mean_DL[,2] # these are the upper 95CIs of the slopes
+DL_UCI_ants <- iCAMP_slopes_ants[3,4]
+DL_UCI_moths <- DL_UCI[2]
+DL_UCI_orthoptera <- DL_UCI[2]  + DL_UCI[8]
+DL_UCI_rove_beetles <- DL_UCI[2]  + DL_UCI[9]
+DL_UCI_scarabs <- DL_UCI[2]  + DL_UCI[10]
+DL_UCI_spiders <- DL_UCI[2] + DL_UCI[11]
+DL_UCI_weevils <- DL_UCI[2]  + DL_UCI[12]
+
+DL_summary <- data.frame(taxon = c( 'Ants', 'Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders', 'Weevils'), 
+                          slope = c(DL_slope_ants, DL_slope_moths, DL_slope_orthoptera, DL_slope_rove_beetles, DL_slope_scarabs, DL_slope_spiders, DL_slope_weevils),
+                          lci = c(DL_LCI_ants, DL_LCI_moths, DL_LCI_orthoptera, DL_LCI_rove_beetles, DL_LCI_scarabs, DL_LCI_spiders, DL_LCI_weevils),
+                          uci = c(DL_UCI_ants, DL_UCI_moths, DL_UCI_orthoptera, DL_UCI_rove_beetles, DL_UCI_scarabs, DL_UCI_spiders, DL_UCI_weevils))
+DL_summary$process <- 'Dispersal limitation'
+DL_summary
+
+
+DL_summary <- rbind(DL_summary, c('All', weighted_mean_slope(DL_summary), 'Dispersal limitation'))
+DL_summary 
+
+
+HoD_coefs <- confint(iCAMP_all_DirichReg)[[3]]$beta$mean_HoD # these are the slopes
+HoD_slope_ants <- iCAMP_slopes_ants[4,2]
+HoD_slope_moths <- HoD_coefs[2]
+HoD_slope_orthoptera <- HoD_coefs[2]  + HoD_coefs[8]
+HoD_slope_rove_beetles <- HoD_coefs[2] + HoD_coefs[9]
+HoD_slope_scarabs <- HoD_coefs[2]  + HoD_coefs[10]
+HoD_slope_spiders <- HoD_coefs[2]  + HoD_coefs[11]
+HoD_slope_weevils <- HoD_coefs[2]  + HoD_coefs[12]
+
+HoD_LCI <- confint(iCAMP_all_DirichReg)[[7]][[1]]$mean_HoD[,1] # these are the lower 95CIs of the slopes
+HoD_LCI_ants <- iCAMP_slopes_ants[4,3]
+HoD_LCI_moths <- HoD_LCI[2]
+HoD_LCI_orthoptera <- HoD_LCI[2] +  HoD_LCI[8]
+HoD_LCI_rove_beetles <- HoD_LCI[2]  + HoD_LCI[9]
+HoD_LCI_scarabs <- HoD_LCI[2]  + HoD_LCI[10]
+HoD_LCI_spiders <- HoD_LCI[2]  + HoD_LCI[11]
+HoD_LCI_weevils <- HoD_LCI[2]  + HoD_LCI[12]
+
+HoD_UCI <- confint(iCAMP_all_DirichReg)[[7]][[1]]$mean_HoD[,2] # these are the upper 95CIs of the slopes
+HoD_UCI_ants <- iCAMP_slopes_ants[4,4]
+HoD_UCI_moths <- HoD_UCI[2]
+HoD_UCI_orthoptera <- HoD_UCI[2] + HoD_UCI[8]
+HoD_UCI_rove_beetles <- HoD_UCI[2]  + HoD_UCI[9]
+HoD_UCI_scarabs <- HoD_UCI[2]  + HoD_UCI[10]
+HoD_UCI_spiders <- HoD_UCI[2]  + HoD_UCI[11]
+HoD_UCI_weevils <- HoD_UCI[2]  + HoD_UCI[12]
+
+HoD_summary <- data.frame(taxon = c('Ants', 'Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders', 'Weevils'), 
+                         slope = c(HoD_slope_ants, HoD_slope_moths, HoD_slope_orthoptera, HoD_slope_rove_beetles, HoD_slope_scarabs, HoD_slope_spiders, HoD_slope_weevils),
+                         lci = c(HoD_LCI_ants, HoD_LCI_moths, HoD_LCI_orthoptera, HoD_LCI_rove_beetles, HoD_LCI_scarabs, HoD_LCI_spiders, HoD_LCI_weevils),
+                         uci = c(HoS_UCI_ants, HoD_UCI_moths, HoD_UCI_orthoptera, HoD_UCI_rove_beetles, HoD_UCI_scarabs, HoD_UCI_spiders, HoD_UCI_weevils))
+HoD_summary$process <- 'Homogenizing dispersal'
+
+HoD_summary <- rbind(HoD_summary, c('All', weighted_mean_slope(HoD_summary), 'Homogenizing dispersal'))
+HoD_summary
+
+
+Dr_coefs <- confint(iCAMP_all_DirichReg)[[3]]$beta$mean_Dr # these are the slopes
+Dr_slope_ants <- iCAMP_slopes_ants[5,2]
+Dr_slope_moths <- Dr_coefs[2]
+Dr_slope_orthoptera <- Dr_coefs[2] +  Dr_coefs[8]
+Dr_slope_rove_beetles <- Dr_coefs[2] + Dr_coefs[9]
+Dr_slope_scarabs <- Dr_coefs[2] + Dr_coefs[10]
+Dr_slope_spiders <- Dr_coefs[2] + Dr_coefs[11]
+Dr_slope_weevils <- Dr_coefs[2] + Dr_coefs[12]
+
+Dr_LCI <- confint(iCAMP_all_DirichReg)[[7]][[1]]$mean_Dr[,1] # these are the lower 95CIs of the slopes
+Dr_LCI_ants <- iCAMP_slopes_ants[5,3]
+Dr_LCI_moths <- Dr_LCI[2]
+Dr_LCI_orthoptera <- Dr_LCI[2] + Dr_LCI[8]
+Dr_LCI_rove_beetles <- Dr_LCI[2] + Dr_LCI[9]
+Dr_LCI_scarabs <- Dr_LCI[2] + Dr_LCI[10]
+Dr_LCI_spiders <- Dr_LCI[2]  + Dr_LCI[11]
+Dr_LCI_weevils <- Dr_LCI[2]  + Dr_LCI[12]
+
+Dr_UCI <- confint(iCAMP_all_DirichReg)[[7]][[1]]$mean_Dr[,2] # these are the upper 95CIs of the slopes
+Dr_UCI_ants <- iCAMP_slopes_ants[5,4]
+Dr_UCI_moths <- Dr_UCI[2]
+Dr_UCI_orthoptera <- Dr_UCI[2] + Dr_UCI[8]
+Dr_UCI_rove_beetles <- Dr_UCI[2]  + Dr_UCI[9]
+Dr_UCI_scarabs <- Dr_UCI[2]  + Dr_UCI[10]
+Dr_UCI_spiders <- Dr_UCI[2]  + Dr_UCI[11]
+Dr_UCI_weevils <- Dr_UCI[2]  + Dr_UCI[12]
+
+Dr_summary <- data.frame(taxon = c('Ants','Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders', 'Weevils'), 
+                         slope = c(Dr_slope_ants, Dr_slope_moths, Dr_slope_orthoptera, Dr_slope_rove_beetles, Dr_slope_scarabs, Dr_slope_spiders, Dr_slope_weevils),
+                         lci = c(Dr_LCI_ants, Dr_LCI_moths, Dr_LCI_orthoptera, Dr_LCI_rove_beetles, Dr_LCI_scarabs, Dr_LCI_spiders, Dr_LCI_weevils),
+                         uci = c(Dr_UCI_ants, Dr_UCI_moths, Dr_UCI_orthoptera, Dr_UCI_rove_beetles, Dr_UCI_scarabs, Dr_UCI_spiders, Dr_UCI_weevils))
+Dr_summary$process <- 'Drift'
+Dr_summary
+
+
+Dr_summary <- rbind(Dr_summary, c('All', weighted_mean_slope(Dr_summary), 'Drift'))
+
+
+##### Dirichlet regression with DL as ref category ----------------------=------
+iCAMP_all_processes_summary_DR$Taxa <- as.factor(iCAMP_all_processes_summary_DR$Taxa)
+iCAMP_all_DirichReg_2 <- DirichReg(Y ~ Mean_logACD*Taxa, data = iCAMP_all_processes_summary_DR,  model = "alternative",  base = 3)
+summary(iCAMP_all_DirichReg_2)
+
+confint(iCAMP_all_DirichReg_2)[[3]]$beta$mean_HeS
+HeS_slope_ants <- iCAMP_slopes_ants[1,2]
+HeS_coefs <- confint(iCAMP_all_DirichReg_2)[[3]]$beta$mean_HeS # these are the slopes
+HeS_slope_moths <- HeS_coefs[2]
+HeS_slope_orthoptera <- HeS_coefs[2] +  HeS_coefs[8]
+HeS_slope_rove_beetles <- HeS_coefs[2] +  HeS_coefs[9]
+HeS_slope_scarabs <- HeS_coefs[2]  + HeS_coefs[10]
+HeS_slope_spiders <- HeS_coefs[2]  + HeS_coefs[11]
+HeS_slope_weevils <- HeS_coefs[2] + HeS_coefs[12]
+
+HeS_LCI <- confint(iCAMP_all_DirichReg_2)[[7]][[1]]$mean_HeS[,1] # these are the lower 95CIs of the slopes
+HeS_LCI_ants <- iCAMP_slopes_ants[1,3]
+HeS_LCI_moths <- HeS_LCI[2]
+HeS_LCI_orthoptera <- HeS_LCI[2] + HeS_LCI[8]
+HeS_LCI_rove_beetles <- HeS_LCI[2] +  HeS_LCI[9]
+HeS_LCI_scarabs <- HeS_LCI[2] +  HeS_LCI[10]
+HeS_LCI_spiders <- HeS_LCI[2] +  HeS_LCI[11]
+HeS_LCI_weevils <- HeS_LCI[2] +  HeS_LCI[12]
+
+HeS_UCI <- confint(iCAMP_all_DirichReg_2)[[7]][[1]]$mean_HeS[,2] # these are the upper 95CIs of the slopes
+HeS_UCI_ants <- iCAMP_slopes_ants[1,4]
+HeS_UCI_moths <- HeS_UCI[2]
+HeS_UCI_orthoptera <- HeS_UCI[2] +  HeS_UCI[8]
+HeS_UCI_rove_beetles <- HeS_UCI[2] +  HeS_UCI[9]
+HeS_UCI_scarabs <- HeS_UCI[2] + HeS_UCI[10]
+HeS_UCI_spiders <- HeS_UCI[2] +  HeS_UCI[11]
+HeS_UCI_weevils <- HeS_UCI[2] +  HeS_UCI[12]
+
+HeS_summary <- data.frame(taxon = c('Ants', 'Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders', 'Weevils'), 
+                         slope = c(HeS_slope_ants, HeS_slope_moths, HeS_slope_orthoptera, HeS_slope_rove_beetles, HeS_slope_scarabs, HeS_slope_spiders, HeS_slope_weevils),
+                         lci = c(HeS_LCI_ants, HeS_LCI_moths, HeS_LCI_orthoptera, HeS_LCI_rove_beetles, HeS_LCI_scarabs, HeS_LCI_spiders, HeS_LCI_weevils),
+                         uci = c(HeS_UCI_ants, HeS_UCI_moths, HeS_UCI_orthoptera, HeS_UCI_rove_beetles, HeS_UCI_scarabs, HeS_UCI_spiders, HeS_UCI_weevils))
+HeS_summary$process <- 'Heterogeneous selection'
+HeS_summary
+
+
+HeS_summary <- rbind(HeS_summary, c('All', weighted_mean_slope(HeS_summary), 'Heterogeneous selection'))
+
+
+
+#### Slope graph   -------------------------------------------------------------
+HeS_summary
+processes_summary <- as.data.frame(rbind(HeS_summary, HoS_summary, DL_summary, HoD_summary, Dr_summary))
+processes_summary$slope <- as.numeric(processes_summary$slope)
+processes_summary$lci <- as.numeric(processes_summary$lci)
+processes_summary$uci <- as.numeric(processes_summary$uci)
+
+colours <-  c('black', '#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',  'grey',   '#E31A1C', '#6A3D9A')
+shapes <-  c(19, 16, 17, 15, 16, 18, 17, 15)
+
+process_order <- c('Heterogeneous selection', 'Homogeneous selection', 'Dispersal limitation', 'Homogenizing dispersal', 'Drift')
+
+processes_summary
+str(processes_summary)
+
+write.excel(processes_summary)
+
+
+library(ggplot2)
+iCAMP_slope_plot <- ggplot(data = processes_summary, aes(y = slope, x = factor(process, level = process_order), colour = taxon, shape = taxon)) +
+  geom_errorbar(data = processes_summary, aes(ymin = lci, ymax = uci), width = 0,
+                position=position_dodge(width=0.8), show.legend = FALSE, size = 0.5) +
+  geom_point(size = 5, position=position_dodge(width=0.8), alpha = 0.9) +
+  labs(x = "Community assembly process", y = "Slope of relationship between ACD*taxon \n and importance of assembly process", 
+       shape = "taxon", colour = "taxon", fill = "taxon") +
+  scale_colour_manual(values = colours,
+                      labels = c('All', 'Ants', 'Moths', 'Orthoptera', 'Rove beetles','Scarabs', 'Spiders',  'Weevils'))+
+  
+  scale_shape_manual(values = shapes, 
+                     labels = c('All', 'Ants', 'Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders',  'Weevils')) +
+  
+  scale_x_discrete(labels = c('Heterogeneous \n selection', 'Homogeneous \n selection', 'Dispersal \n limitation', 
+                              'Homogenising \n dispersal', 'Drift and others')) +
+  
+  geom_segment(x=0.5, xend = 2.45, y = -6.8, yend = -6.8, lineend = 'round', linejoin = 'round', size = 1.1, linetype = 'solid',colour = 'black') + 
+  annotate('text', x = 1.6, y = -7.2, label = "Deterministic", colour = 'black', size = 6) + 
+  geom_segment(x=2.55, xend = 5.6, y = -6.8, yend = -6.8, lineend = 'round', linejoin = 'round', size = 1.1, linetype = 'solid',colour = 'black') + 
+  annotate('text', x = 4, y = -7.2, label = "Stochastic", colour = 'black', size = 6) + 
+  coord_cartesian(ylim = c(-4, 4), xlim = c(1, 5), clip = "off") +
+
+  geom_vline(aes(xintercept =1.5), colour = 'grey')  +
+  geom_vline(aes(xintercept =2.5), colour = 'grey')  +
+  geom_vline(aes(xintercept =3.5), colour = 'grey')  +
+  geom_vline(aes(xintercept =4.5), colour = 'grey')  +
+  geom_vline(aes(xintercept =5.6), colour = 'grey')  +
+  #geom_vline(aes(xintercept =5.6), colour = 'grey')  +
+  geom_hline(aes(yintercept = 0), linetype = 'dashed') +
+  
+  theme_classic() +
+  theme(axis.text.y=element_text(size=22, colour = 'black'), 
+        axis.text.x=element_text(size=20, colour = 'black'), 
+        axis.title.x=element_text(size=22, vjust=-7),
+        axis.title.y=element_text(size=16),
+        legend.position = 'none',
+        plot.margin = unit(c(0.5, 0.5, 1.5, 0.5), "cm")) 
+iCAMP_slope_plot
+
+iCAMP_slope_plot
+
+
+#### Relative importance graph ####
+
+iCAMP_all_processes_summary <- as.data.frame(rbind(iCAMP_ants_processes_summary, iCAMP_orthoptera_processes_summary, iCAMP_spiders_processes_summary,
+                                                   iCAMP_weevils_processes_summary, iCAMP_rove_beetles_processes_summary, iCAMP_scarabs_processes_summary))
+
+##### Calculate 95% quantiles #####
+
+# Using bootstrapped 95% quantiles for error bars since the relative importance data are bounded between 0 and 1
+
+set.seed(5)
+bootstrap <- function(data){ # Data is one sampling block 
+  for (i in 1:1000) {
+    boot_sample <-sample(data, replace = TRUE)
+    boot_lci <- quantile(boot_sample, probs = 0.025)
+    boot_uci <- quantile(boot_sample, probs = 0.975)
+    return(c(boot_lci, boot_uci))
+    
+  }
+}
+
+
+iCAMP_HeS_summary_rel_imp <- as.data.frame(iCAMP_all_processes_summary %>% group_by(Taxa) %>% 
+                                             summarise(mean_rel_imp = mean(mean_HeS), 
+                                                       lci_rel_imp = bootstrap(mean_HeS)[1], 
+                                                       uci_rel_imp = bootstrap(mean_HeS)[2]))
+iCAMP_HeS_summary_rel_imp$process <- 'HeS'
+iCAMP_HeS_summary_rel_imp
+
+iCAMP_HeS_summary_rel_imp <- rbind(iCAMP_HeS_summary_rel_imp, iCAMP_ants_processes_summary[1,])
+iCAMP_HeS_summary_rel_imp 
+
+
+iCAMP_HoS_summary_rel_imp <- as.data.frame(iCAMP_all_processes_summary %>% group_by(Taxa) %>% 
+                                             summarise(mean_rel_imp = mean(mean_HoS), 
+                                                       lci_rel_imp = bootstrap(mean_HoS)[1], 
+                                                       uci_rel_imp = bootstrap(mean_HoS)[2]))
+iCAMP_HoS_summary_rel_imp$process <- 'HoS'
+iCAMP_HoS_summary_rel_imp 
+iCAMP_HoS_summary_rel_imp <- rbind(iCAMP_HoS_summary_rel_imp, iCAMP_ants_processes_summary[7,])
+
+
+
+iCAMP_DL_summary_rel_imp <- as.data.frame(iCAMP_all_processes_summary %>% group_by(Taxa) %>% 
+                                            summarise(mean_rel_imp = mean(mean_DL), 
+                                                      lci_rel_imp = bootstrap(mean_DL)[1], 
+                                                      uci_rel_imp = bootstrap(mean_DL)[2]))
+iCAMP_DL_summary_rel_imp$process <- 'DL'
+iCAMP_DL_summary_rel_imp
+iCAMP_DL_summary_rel_imp <- rbind(iCAMP_DL_summary_rel_imp, iCAMP_ants_processes_summary[13,])
+
+
+
+iCAMP_HoD_summary_rel_imp <- as.data.frame(iCAMP_all_processes_summary %>% group_by(Taxa) %>% 
+                                             summarise(mean_rel_imp= mean(mean_HoD), 
+                                                       lci_rel_imp = bootstrap(mean_HoD)[1], 
+                                                       uci_rel_imp = bootstrap(mean_HoD)[2]))
+iCAMP_HoD_summary_rel_imp$process <- 'HoD'
+iCAMP_HoD_summary_rel_imp
+iCAMP_HoD_summary_rel_imp <- rbind(iCAMP_HoD_summary_rel_imp, iCAMP_ants_processes_summary[19,])
+
+
+iCAMP_Dr_summary_rel_imp <- as.data.frame(iCAMP_all_processes_summary %>% group_by(Taxa) %>% 
+                                            summarise(mean_rel_imp = mean(mean_Dr), 
+                                                      lci_rel_imp = bootstrap(mean_Dr)[1], 
+                                                      uci_rel_imp = bootstrap(mean_Dr)[2]))
+iCAMP_Dr_summary_rel_imp$process <- 'Dr'
+iCAMP_Dr_summary_rel_imp
+
+iCAMP_Dr_summary_rel_imp <- rbind(iCAMP_Dr_summary_rel_imp, iCAMP_ants_processes_summary[25,])
+
+##### Overall weighted mean ###### 
+
+# Method from page 11 of this pdf https://www.meta-analysis.com/downloads/Meta%20Analysis%20Fixed%20vs%20Random%20effects.pdf (Borenstein et al 2007)
+# This is the raw calculation for calculating the weighted mean for a meta-analysis in a fixed-effect model
+# Weighting by within-sample variance, which is roughly proportional to sample size (according to the link above). 
+# I'm using the range of the 95% confidence intervals as the within-study variance
+# Fixed-effects model is appropriate because each sample (rel imp of process) was calculated using the exact same analysis (iCAMP)
+
+weighted_mean_rel_imp <- function(data) { # data is the mean, lci and uci of relative importance for each taxa for one process
+  
+  # vi = 'within-study variance'  = range of 95% confidence intervals for each taxa
+  # wi = weight = 1/vi
+  # mean_rel_imp = 'effect size' = mean relative importance for each taxa
+  # Mean = weighted mean = the overall weighted mean relative importance of this process (what we're trying to calculate)
+  # SE = standard error
+  # LCI = lower confidence interval
+  # UCI = upper confidence interval
+  
+  # 1. Calculate within-study variance (vi)
+  data$vi <- data$uci_rel_imp - data$lci_rel_imp
+  # 2. Calculate weights (wi). 
+  data$wi <- 1/data$vi
+  #  wi will be infinite if mean_rel_imp is 0. Replacing infinities with 0. 
+  is.na(data)<-sapply(data, is.infinite)
+  data[is.na(data)]<-0
+  # 3. Calculate overall weighted mean
+  Mean <- sum(data$wi * data$mean_rel_imp) / sum(data$wi) 
+  # 4. Calculate bootstrapped 95% quantiles
+  for (i in 1:1000) {
+    boot_sample <-sample(data$mean_rel_imp, replace = TRUE) #rather than data$mean_rel_imp, can you incorporate the weightings?
+    boot_lci <- quantile(boot_sample, probs = 0.025)
+    boot_uci <- quantile(boot_sample, probs = 0.975)
+  }
+  return(c(Mean, boot_lci, boot_uci))
+}
+
+# Calculate weighted overall means ( +/- 95% quantiles) for all processes
+
+iCAMP_HeS_rel_imp_weighted_mean <- as.data.frame(t(weighted_mean_rel_imp(iCAMP_HeS_summary_rel_imp)))
+colnames(iCAMP_HeS_rel_imp_weighted_mean) <- c('mean_rel_imp', 'lci_rel_imp', 'uci_rel_imp')
+iCAMP_HeS_rel_imp_weighted_mean$Taxa <- 'All'
+iCAMP_HeS_rel_imp_weighted_mean$process <- 'Heterogeneous selection'
+iCAMP_HeS_rel_imp_weighted_mean
+
+iCAMP_HoS_rel_imp_weighted_mean <- as.data.frame(t(weighted_mean_rel_imp(iCAMP_HoS_summary_rel_imp)))
+colnames(iCAMP_HoS_rel_imp_weighted_mean) <- c('mean_rel_imp', 'lci_rel_imp', 'uci_rel_imp')
+iCAMP_HoS_rel_imp_weighted_mean$Taxa <- 'All'
+iCAMP_HoS_rel_imp_weighted_mean$process <- 'Homogeneous selection'
+iCAMP_HoS_rel_imp_weighted_mean
+
+iCAMP_DL_rel_imp_weighted_mean <- as.data.frame(t(weighted_mean_rel_imp(iCAMP_DL_summary_rel_imp)))
+colnames(iCAMP_DL_rel_imp_weighted_mean) <- c('mean_rel_imp', 'lci_rel_imp', 'uci_rel_imp')
+iCAMP_DL_rel_imp_weighted_mean$Taxa <- 'All'
+iCAMP_DL_rel_imp_weighted_mean$process <- 'Dispersal limitation'
+iCAMP_DL_rel_imp_weighted_mean
+
+iCAMP_HoD_rel_imp_weighted_mean <- as.data.frame(t(weighted_mean_rel_imp(iCAMP_HoD_summary_rel_imp)))
+colnames(iCAMP_HoD_rel_imp_weighted_mean) <- c('mean_rel_imp', 'lci_rel_imp', 'uci_rel_imp')
+iCAMP_HoD_rel_imp_weighted_mean$Taxa <- 'All'
+iCAMP_HoD_rel_imp_weighted_mean$process <- 'Homogenizing Dispersal'
+iCAMP_HoD_rel_imp_weighted_mean
+
+iCAMP_Dr_rel_imp_weighted_mean <- as.data.frame(t(weighted_mean_rel_imp(iCAMP_Dr_summary_rel_imp)))
+colnames(iCAMP_Dr_rel_imp_weighted_mean) <- c('mean_rel_imp', 'lci_rel_imp', 'uci_rel_imp')
+iCAMP_Dr_rel_imp_weighted_mean$Taxa <- 'All'
+iCAMP_Dr_rel_imp_weighted_mean$process <- 'Drift'
+iCAMP_Dr_rel_imp_weighted_mean
+
+iCAMP_HeS_summary_rel_imp$process <- 'Heterogeneous selection'
+iCAMP_HoS_summary_rel_imp$process <- 'Homogeneous selection'
+iCAMP_DL_summary_rel_imp$process <- 'Dispersal limitation'
+iCAMP_HoD_summary_rel_imp$process <- 'Homogenizing dispersal'
+iCAMP_Dr_summary_rel_imp$process <- 'Drift'
+
+
+iCAMP_all_rel_imp <- as.data.frame(rbind(iCAMP_HeS_summary_rel_imp, iCAMP_HeS_rel_imp_weighted_mean,
+                                         iCAMP_HoS_summary_rel_imp, iCAMP_HoS_rel_imp_weighted_mean,
+                                         iCAMP_DL_summary_rel_imp, iCAMP_DL_rel_imp_weighted_mean,
+                                         iCAMP_HoD_summary_rel_imp, iCAMP_HoD_rel_imp_weighted_mean,
+                                         iCAMP_Dr_summary_rel_imp, iCAMP_Dr_rel_imp_weighted_mean))
+
+iCAMP_all_rel_imp 
+
+write.excel <- function(x,row.names=FALSE,col.names=TRUE,...) {
+  write.table(x,"clipboard",sep="\t",row.names=row.names,col.names=col.names,...)
+}
+
+
+write.excel(iCAMP_all_rel_imp)
+
+
+
+##### Plot #####
+colours <-  c('black', '#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',  'grey',   '#E31A1C', '#6A3D9A')
+shapes <-  c(19, 16, 17, 15, 16, 18, 17, 15)
+
+process_order <- c('Heterogeneous selection', 'Homogeneous selection', 'Dispersal limitation', 'Homogenizing dispersal', 'Drift')
+
+iCAMP_all_rel_imp$process <- stringr::str_replace(iCAMP_all_rel_imp$process, "Homogenizing Dispersal", "Homogenizing dispersal")
+
+library(ggplot2)
+iCAMP_all_rel_imp <- na.omit(iCAMP_all_rel_imp)
+iCAMP_all_rel_imp_plot <- ggplot(data = iCAMP_all_rel_imp, aes(y = mean_rel_imp, x = factor(process, level = process_order),fill = Taxa, colour = Taxa, shape = Taxa)) +
+  geom_errorbar(data = iCAMP_all_rel_imp, aes( ymin = lci_rel_imp, ymax = uci_rel_imp), width = 0,
+                position=position_dodge(width=0.8), show.legend = FALSE, size = 0.5) +
+  geom_point(size = 5, position=position_dodge(width=0.8), alpha = 0.9) +
+  
+  labs(x = "", y = "Relative importance", 
+       shape = "Taxa", colour = "Taxa", fill = "Taxa") +
+  
+  scale_colour_manual(values = colours,
+                      labels = c('All',  'Ants', 'Moths', 'Orthoptera', 'Rove beetles','Scarabs', 'Spiders',  'Weevils'))+
+  
+  scale_shape_manual(values = shapes, 
+                     labels = c('All', 'Ants','Moths',  'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders',  'Weevils'))+
+  
+  scale_x_discrete(labels = c('Heterogeneous \n selection', 'Homogeneous \n selection', 'Dispersal \n limitation', 
+                              'Homogeneous \n dispersal', 'Drift and others')) +
+  geom_vline(aes(xintercept =1.5), colour = 'grey')  +
+  geom_vline(aes(xintercept =2.5), colour = 'grey')  +
+  geom_vline(aes(xintercept =3.5), colour = 'grey')  +
+  geom_vline(aes(xintercept =4.5), colour = 'grey')  +
+  geom_vline(aes(xintercept =5.6), colour = 'grey')  +
+  geom_vline(aes(xintercept =5.6), colour = 'grey')  +
+  theme_classic() +
+  theme(axis.text.y=element_text(size=22, colour = 'black'), 
+        axis.title.y=element_text(size=18),
+        axis.text.x = element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.title=element_blank(),
+        legend.text=element_text(size=18), 
+        legend.position = c(0.1,0.7),
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")) 
+iCAMP_all_rel_imp_plot
+
+
+
+### Plot both together in panelled figure ####
+
+iCAMP_all_rel_imp_plot
+iCAMP_slope_plot
+
+library(cowplot)
+
+iCAMP_plot_panelled <- plot_grid(iCAMP_all_rel_imp_plot, iCAMP_slope_plot,
+                                 nrow = 2, ncol = 1, align = 'v', labels = c('A', 'B'),
+                                 label_size = 20, label_x = 0.09)
+
+iCAMP_plot_panelled
+
