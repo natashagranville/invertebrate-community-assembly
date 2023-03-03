@@ -1,0 +1,329 @@
+
+#### NST -----------------------------------------------------------------------
+
+NST_ants_summary <- read.csv("Results/NST_ants_summary.csv")
+NST_moths_summary <- read.csv("Results/NST_moths_summary.csv")
+NST_orthoptera_summary <- read.csv("Results/NST_orthoptera_summary.csv")
+NST_rove_beetles_summary <- read.csv("Results/NST_rove_beetles_summary.csv")
+NST_scarabs_summary <- read.csv("Results/NST_scarabs_summary.csv")
+NST_spiders_summary <- read.csv("Results/NST_spiders_summary.csv")
+NST_weevils_summary <- read.csv("Results/NST_weevils_summary.csv")
+
+NST_ants_summary$taxa <- 'ants'
+NST_moths_summary$taxa <- 'moths'
+NST_orthoptera_summary$taxa <- 'orthoptera'
+NST_rove_beetles_summary$taxa <- 'rove_beetles'
+NST_scarabs_summary$taxa <- 'scarabs'
+NST_spiders_summary$taxa <- 'spiders'
+NST_weevils_summary$taxa <- 'weevils'
+
+
+NST_all_summary <- rbind(NST_ants_summary, NST_moths_summary, NST_orthoptera_summary, NST_rove_beetles_summary, 
+                         NST_scarabs_summary, NST_spiders_summary, NST_weevils_summary)
+
+
+##### Summary stats #####
+
+# Weighted overall mean NST
+weighted_mean <- function(data) { # data contains the mean and range (of 95% quantiles) for each taxon
+  #  Calculate overall weighted mean
+  Mean <- sum((1/data$range) * data$mean) / sum((1/data$range)) 
+  # Calculate bootstrapped 95% quantiles
+  set.seed(613)
+  for (i in 1:1000) {
+    boot_sample <-sample(data$mean, replace = TRUE) #rather than data$mean_rel_imp, can you incorporate the weightings?
+    boot_lci <- quantile(boot_sample, probs = 0.025)
+    boot_uci <- quantile(boot_sample, probs = 0.975)
+  }
+  return(c(Mean, boot_lci, boot_uci))
+}
+
+weighted_mean_NST <- weighted_mean(NST_all_summary)
+weighted_mean_NST
+
+# Unweighted mean
+mean_NST = mean(NST_all_summary$mean)
+se_NST = sd(NST_all_summary$mean) / sqrt(length(NST_all_summary$mean))
+n_NST = length(NST_all_summary$mean)
+lower.ci_NST = mean_NST - qt(1 - (0.05 / 2), n_NST - 1) * se_NST
+upper.ci_NST = mean_NST + qt(1 - (0.05 / 2), n_NST - 1) * se_NST
+
+mean_NST
+lower.ci_NST
+upper.ci_NST
+
+# T test - is the mean NST significantly different from 0.5?
+t.test(NST_all_summary$mean, mu = 0.5)
+
+# ANOVA for evaluating differences among taxa
+NST_anova <- aov(mean ~ taxa, data = NST_all_summary)
+summary(NST_anova)
+
+boxplot(mean ~ taxa, data = NST_all_summary, xlab = "Taxa", ylab = "NST", cex.lab = 1.4, cex.axis = 1.3)
+
+NST_all_summary %>% group_by(taxa) %>% summarise(mean = mean(mean))
+
+
+
+##### Betareg #####
+library(betareg)
+
+betareg_NST <- betareg::betareg(mean~Mean_logACD * taxa , data = NST_all_summary)
+summary(betareg_NST)
+
+betareg_NST_all <- betareg::betareg(mean~Mean_logACD, data = NST_all_summary)
+summary(betareg_NST_all)
+
+summary(betareg(mean~Mean_logACD, data = NST_scarabs_summary))
+summary(betareg(mean~Mean_logACD, data = NST_rove_beetles_summary))
+summary(betareg(mean~Mean_logACD, data = NST_moths_summary))
+summary(betareg(mean~Mean_logACD, data = NST_ants_summary))
+summary(betareg(mean~Mean_logACD, data = NST_orthoptera_summary))
+summary(betareg(mean~Mean_logACD, data = NST_spiders_summary))
+summary(betareg(mean~Mean_logACD, data = NST_weevils_summary))
+
+##### Graph #####
+colours <-  c('#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',  'grey',   '#E31A1C', '#6A3D9A')
+shapes <-  c(16, 17, 15, 16, 18, 17, 15)
+linetypes <- c('longdash', 'dotted', 'dotdash', 'longdash', 'longdash', 'dotted', 'dotdash')
+
+library(ggplot2)
+
+NST_betareg_graph<-ggplot() +
+  geom_point(data = NST_all_summary, aes(x = Mean_logACD, y = mean, colour = taxa, shape = taxa), size = 2.9, stroke = 1.058) + 
+  
+  scale_colour_manual(values = colours) +
+  scale_shape_manual(values = shapes) +
+  scale_linetype_manual(values = linetypes) +
+  
+  # individual groups of taxa
+  geom_line(data = NST_all_summary, aes(x = Mean_logACD, y = predict(betareg_NST), colour = taxa, linetype = taxa), size = 0.8)  +
+  
+  # all
+  geom_line(data = NST_all_summary, aes(x = Mean_logACD,  y =predict(betareg_NST_all)), linetype = 'dotted', colour = 'black', size = 2) +  
+  
+  # add point for overall weighted mean
+  geom_point(aes(x = 2.5, y = weighted_mean_NST[1]), size = 5)+
+  geom_errorbar(aes(x = 2.5, ymin = weighted_mean_NST[2], ymax = weighted_mean_NST[3]), width = 0.1, size = 0.7)+
+  
+  theme_classic() +
+  theme( axis.text=element_text(size=21, colour = 'black'),  
+         axis.title=element_text(size=21),
+         legend.position = 'null', 
+         plot.margin = margin(0.7,0.7,0.7,0.7, 'cm')) +
+  labs(x = '', y = 'NST') +
+  
+  geom_segment(aes(x = Mean_logACD.x, y = mean), data = NST_all_summary, x=0.26, xend = 0.26, y = 0, yend = 1,  lineend = 'round', linejoin = 'round', linetype = 'solid', size = 1.1, colour = 'black', arrow = arrow()) + 
+  annotate('text', x = 0.17, y = 0.7, label = "Increasing stochasticity", colour = 'black', size = 5.5, angle = 90) +
+  
+  coord_cartesian(ylim = c(0, 1), xlim = c(0.9, 2.6), clip = "off") 
+NST_betareg_graph
+
+
+#### RC ------------------------------------------------------------------------
+RC_ants_summary <- read.csv("Results/RC_ants_summary.csv")
+RC_moths_summary <- read.csv("Results/RC_moths_summary.csv")
+RC_orthoptera_summary <- read.csv("Results/RC_orthoptera_summary.csv")
+RC_rove_beetles_summary <- read.csv("Results/RC_rove_beetles_summary.csv")
+RC_scarabs_summary <- read.csv("Results/RC_scarabs_summary.csv")
+RC_spiders_summary <- read.csv("Results/RC_spiders_summary.csv")
+RC_weevils_summary <- read.csv("Results/RC_weevils_summary.csv")
+
+RC_ants_summary$taxa <- 'Ants'
+RC_moths_summary$taxa <- 'Moths'
+RC_orthoptera_summary$taxa <- 'Orthoptera'
+RC_rove_beetles_summary$taxa <- 'Rove beetles'
+RC_scarabs_summary$taxa <- 'Scarabs'
+RC_spiders_summary$taxa <- 'Spiders'
+RC_weevils_summary$taxa <- 'Weevils'
+
+RC_all_summary <- rbind(RC_ants_summary, RC_moths_summary, RC_orthoptera_summary, RC_rove_beetles_summary, 
+                         RC_scarabs_summary, RC_spiders_summary, RC_weevils_summary)
+
+##### Summary stats #####
+
+# Weighted overall mean RC
+
+weighted_mean_RC <- weighted_mean(RC_all_summary)
+weighted_mean_RC 
+
+# Unweighted mean
+mean_RC = mean(RC_all_summary$mean)
+se_RC = sd(RC_all_summary$mean) / sqrt(length(RC_all_summary$mean))
+n_RC = length(RC_all_summary$mean)
+lower.ci_RC = mean_RC - qt(1 - (0.05 / 2), n_RC - 1) * se_RC
+upper.ci_RC = mean_RC + qt(1 - (0.05 / 2), n_RC - 1) * se_RC
+
+mean_RC
+lower.ci_RC
+upper.ci_RC
+
+
+# T test - is the mean RC significantly different from 0.5?
+t.test(RC_all_summary$mean, mu = 0.5)
+
+# ANOVA for evaluating differences among taxa
+RC_anova <- aov(mean ~ taxa, data = RC_all_summary)
+summary(RC_anova)
+
+boxplot(mean ~ taxa, data = RC_all_summary, xlab = "Taxa", ylab = "RC", cex.lab = 1.4, cex.axis = 1.3)
+
+RC_all_summary %>% group_by(taxa) %>% summarise(mean = mean(mean))
+
+###### Betareg #####
+library(betareg)
+betareg_RC <- betareg(mean~Mean_logACD * taxa , data = RC_all_summary)
+summary(betareg_RC)
+
+betareg_RC_all <- betareg(mean~Mean_logACD, data = RC_all_summary)
+summary(betareg_RC_all)
+
+summary(betareg(mean~Mean_logACD, data = RC_scarabs_summary))
+summary(betareg(mean~Mean_logACD, data = RC_rove_beetles_summary))
+summary(betareg(mean~Mean_logACD, data = RC_moths_summary))
+summary(betareg(mean~Mean_logACD, data = RC_ants_summary))
+summary(betareg(mean~Mean_logACD, data = RC_orthoptera_summary))
+summary(betareg(mean~Mean_logACD, data = RC_spiders_summary))
+summary(betareg(mean~Mean_logACD, data = RC_weevils_summary))
+
+
+##### Graph #####
+colours <-  c('#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',  'grey',   '#E31A1C', '#6A3D9A')
+shapes <-  c(16, 17, 15, 16, 18, 17, 15)
+linetypes <- c('longdash', 'dotted', 'dotdash', 'longdash', 'longdash', 'dotted', 'dotdash')
+
+RC_betareg_graph<-ggplot() +
+  geom_point(data = RC_all_summary, aes(x = Mean_logACD, y = mean, colour = taxa, shape = taxa), size = 2.9, stroke = 1.058) + 
+  
+  scale_colour_manual(values = colours) +
+  scale_shape_manual(values = shapes) +
+  scale_linetype_manual(values = linetypes) +
+  
+  # individual groups of taxa
+  geom_line(data = RC_all_summary, aes(x = Mean_logACD, y = predict(betareg_RC), colour = taxa, linetype = taxa), size = 0.8)  +
+  
+  # all
+  geom_line(data = RC_all_summary, aes(x = Mean_logACD,  y =predict(betareg_RC_all)), linetype = 'dotted', colour = 'black', size = 2) +  
+  
+  # add point for overall weighted mean
+  geom_point(aes(x = 2.5, y = weighted_mean_RC[1]), size = 5)+
+  geom_errorbar(aes(x = 2.5, ymin = weighted_mean_RC[2], ymax = weighted_mean_RC[3]), width = 0.1, size = 0.7)+
+  
+  theme_classic() +
+  theme( axis.text=element_text(size=21, colour = 'black'),  
+         axis.title=element_text(size=21),
+         legend.position = 'null', 
+         plot.margin = margin(0,0,1,1, 'cm')) +
+  labs(x = expression('log'[10]~'(ACD)'),y = '1-|RC|') +
+  geom_segment( aes(x = Mean_logACD.x, y = mean), data = RC_all_summary, x=0.8, xend = 2.6, y = -0.19, yend = -0.19, lineend = 'round', linejoin = 'round', size = 1.1, linetype = 'solid',colour = 'black',arrow = arrow()) + 
+  annotate('text', x = 1.6, y = -0.21, label = "Decreasing logging intensity", colour = 'black', size = 5.5) + 
+  
+  theme_classic() +
+  theme( axis.text=element_text(size=21, colour = 'black'),  
+         axis.title=element_text(size=21),
+         legend.position = c(0.51, 0.15),
+         legend.margin = margin(0, 0, 0, 0),
+         legend.text = element_text(size = 16),
+         legend.title = element_blank(),
+         legend.key.height = unit(1, 'cm'),
+         legend.key.width = unit(1.2, 'cm'), 
+         plot.margin = margin(0.7,0.7,0.7,0.7, 'cm')) + 
+  
+  guides(colour = guide_legend(nrow = 4))+
+  coord_cartesian(ylim = c(0, 1), xlim = c(0.9, 2.6), clip = "off") 
+RC_betareg_graph
+
+#### NTP -----------------------------------------------------------------------
+
+NTP_ants_summary <- read.csv("Results/NTP_ants_summary.csv")
+NTP_moths_summary <- read.csv("Results/NTP_moths_summary.csv")
+NTP_orthoptera_summary <- read.csv("Results/NTP_orthoptera_summary.csv")
+NTP_rove_beetles_summary <- read.csv("Results/NTP_rove_beetles_summary.csv")
+NTP_spiders_summary <- read.csv("Results/NTP_spiders_summary.csv")
+NTP_weevils_summary <- read.csv("Results/NTP_weevils_summary.csv")
+
+NTP_ants_summary$taxa <- 'Ants'
+NTP_moths_summary$taxa <- 'Moths'
+NTP_orthoptera_summary$taxa <- 'Orthoptera'
+NTP_rove_beetles_summary$taxa <- 'Rove beetles'
+NTP_spiders_summary$taxa <- 'Spiders'
+NTP_weevils_summary$taxa <- 'Weevils'
+
+NTP_all_summary <- rbind(NTP_ants_summary, NTP_moths_summary, NTP_orthoptera_summary, NTP_rove_beetles_summary, 
+                        NTP_spiders_summary, NTP_weevils_summary)
+
+##### Summary stats #####
+
+# Weighted overall mean NTP
+weighted_mean_NTP <- weighted_mean(NTP_all_summary)
+weighted_mean_NTP 
+
+# Unweighted mean
+mean_NTP = mean(NTP_all_summary$mean)
+se_NTP = sd(NTP_all_summary$mean) / sqrt(length(NTP_all_summary$mean))
+n_NTP = length(NTP_all_summary$mean)
+lower.ci_NTP = mean_NTP - qt(1 - (0.05 / 2), n_NTP - 1) * se_NTP
+upper.ci_NTP = mean_NTP + qt(1 - (0.05 / 2), n_NTP - 1) * se_NTP
+
+mean_NTP
+lower.ci_NTP
+upper.ci_NTP
+
+# T test - is the mean NTP significantly different from 0.5?
+t.test(NTP_all_summary$mean, mu = 0.5)
+
+# ANOVA for evaluating differences among taxa
+NTP_anova <- aov(mean ~ taxa, data = NTP_all_summary)
+summary(NTP_anova)
+
+boxplot(mean ~ taxa, data = NTP_all_summary, xlab = "Taxa", ylab = "NTP", cex.lab = 1.4, cex.axis = 1.3)
+
+NTP_all_summary %>% group_by(taxa) %>% summarise(mean = mean(mean))
+
+###### Betareg #####
+betareg_NTP <- betareg::betareg(mean~Mean_logACD * taxa , data = NTP_all_summary)
+summary(betareg_NTP)
+
+betareg_NTP_all <- betareg::betareg(mean~Mean_logACD, data = NTP_all_summary)
+summary(betareg_NTP_all)
+
+colours_without_scarabs <-  c('#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',   '#E31A1C', '#6A3D9A')
+shapes_without_scarabs <-  c(16, 17, 15, 16, 17, 15)
+linetypes_without_scarabs <- c('longdash', 'dotted', 'dotdash', 'longdash', 'dotted', 'dotdash')
+
+NTP_betareg_graph <- ggplot() +
+  geom_point(data = NTP_all_summary, aes(x = Mean_logACD, y = mean, colour = taxa, shape = taxa), size = 2.9, stroke = 1.058) + 
+  
+  scale_colour_manual(values = colours_without_scarabs) +
+  scale_shape_manual(values = shapes_without_scarabs) +
+  scale_linetype_manual(values = linetypes_without_scarabs) +
+  
+  # individual groups of taxa
+  geom_line(data = NTP_all_summary, aes(x = Mean_logACD, y = predict(betareg_NTP), colour = taxa, linetype = taxa), size = 0.8)  +
+  
+  # all
+  geom_line(data = NTP_all_summary, aes(x = Mean_logACD,  y =predict(betareg_NTP_all)), linetype = 'dotted', colour = 'black', size = 2) +  
+  
+  # add point for overall weighted mean
+  geom_point(aes(x = 2.5, y = weighted_mean_NTP[1]), size = 5)+
+  geom_errorbar(aes(x = 2.5, ymin = weighted_mean_NTP[2], ymax = weighted_mean_NTP[3]), width = 0.1, size = 0.7)+
+  scale_y_continuous(labels = scales::percent) +
+  theme_classic() +
+  theme( axis.text=element_text(size=21, colour = 'black'),  
+         axis.title=element_text(size=21),
+         legend.position = 'null', 
+         plot.margin = margin(0.7,0.7,0.7,0.7, 'cm')) +
+  labs(x = '', y = 'NTP') 
+  
+NTP_betareg_graph
+
+
+#### Plot together -------------------------------------------------------------
+library(grid)
+library(cowplot)
+
+All_betareg_graph<- plot_grid(NST_betareg_graph, RC_betareg_graph, NTP_betareg_graph, nrow = 1,
+                                    ncol = 3, align = 'vh', axis = 'l', labels = c('A', 'B', 'C'), 
+                                    label_x = 0.25, label_size = 20)
+All_betareg_graph 
+
