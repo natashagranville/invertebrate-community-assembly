@@ -3,6 +3,7 @@ library(iCAMP)
 library(fossil)
 library(dplyr)
 library(tidyr)
+library(phytools)
 library(ggtree)
 library(ggplot2)
 library(safedata)
@@ -1055,5 +1056,1359 @@ ggtree(scarabs_phylo) +
   theme(plot.margin = unit(c(0.1,0.1,0.5,0.1), "cm"),
         plot.title = element_text(size = 15))
 ggsave("ScarabsTree.pdf", width = 15, height = 55, units = "cm")
+
+
+##############################################################################################
+###################################### Ants ##################################################
+##############################################################################################
+
+#### ANTS ####
+
+
+# Ants abundance data collected by Tom Fayle et al. https://doi.org/10.5281/zenodo.3876227
+
+# Load the Ants data
+ants_composition_matrix <- load_safe_data(3876227, 'Ant_Attendance_Summary')
+
+# Remove non-relevant columns
+ants_composition_matrix <- subset(ants_composition_matrix, select = -c(Date, Block))
+
+# Set site names as rownames
+rownames(ants_composition_matrix) <- ants_composition_matrix[,1]
+ants_composition_matrix <- ants_composition_matrix[, -1]
+
+# Remove oil palm plantations
+ants_composition_matrix <- ants_composition_matrix[ grep("OP", rownames(ants_composition_matrix), invert = TRUE) , ] 
+
+# Remove taxa (columns) with an abundance of zero - these are taxa that were only found in oil palm plantations (the NTP analysis doesn't work if these taxa are included)
+colSums(ants_composition_matrix)
+ants_composition_matrix <- ants_composition_matrix[, which(colSums(ants_composition_matrix) != 0)]
+colSums(ants_composition_matrix)
+
+sum(colSums(ants_composition_matrix)) # number of individuals
+ncol(ants_composition_matrix) # number of species
+nrow(ants_composition_matrix) # number of sites
+
+## ACD - above-ground carbon density data derived from LiDAR by Swinfield et al., 2014 https://doi.org/10.5281/zenodo.4020697 
+# Select only sites that are in ants_composition_matrix
+ACD_ants <- subset(ACD_all, ACD_all$ID %in% rownames(ants_composition_matrix))
+
+# Calculate mean ACD
+library(tidyr)
+ACD_ants <- separate(ACD_ants, ID, into = c("block", "num"), remove = FALSE)
+ACD_ants <- as.data.frame(ACD_ants %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+
+# Create summarised table to be used for plotting and regression
+ACD_ants_summary <- as.data.frame(ACD_ants %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+# Just sampling block names to be used for analysis
+Sites_ants <- subset(ACD_ants, select = c(ID, block))
+rownames(Sites_ants) <- Sites_ants[, 1]
+Sites_ants <- subset(Sites_ants, select = block)
+
+##### NST - normalised stochasticity ratio #####
+
+NST_ants <- tNST(ants_composition_matrix, Sites_ants, dist.method = "ruzicka", output.rand = TRUE, RC = TRUE)
+
+mean(NST_ants$index.grp$NST.i.ruzicka)
+
+NST_ants_summary <- subset(NST_ants$index.grp, select = c(group, NST.i.ruzicka))
+
+NST_ants_summary <- NST_ants_summary %>% split(NST_ants_summary$group) # Split so you can separately index each sampling block
+
+# Bootstrapping
+NST_ants_boot <- nst.boot(NST_ants, out.detail = TRUE, nworker = 2)
+NST_ants_boot
+
+# Taking the 95th quantiles of the bootstrapping list for each sampling block
+# The bootstrapping list is the results of each random draw
+NST_ants_boot$detail
+
+NST_ants_A <- c('A', NST_ants_summary$'A'$NST.i.ruzicka, 
+                quantile(NST_ants_boot$detail$NST.boot$'A', probs = 0.025), 
+                quantile(NST_ants_boot$detail$NST.boot$'A', probs = 0.975))
+NST_ants_B <- c('B', NST_ants_summary$'B'$NST.i.ruzicka, 
+                quantile(NST_ants_boot$detail$NST.boot$'B', probs = 0.025), 
+                quantile(NST_ants_boot$detail$NST.boot$'B', probs = 0.975))
+NST_ants_C <- c('C', NST_ants_summary$'C'$NST.i.ruzicka, 
+                quantile(NST_ants_boot$detail$NST.boot$'C', probs = 0.025), 
+                quantile(NST_ants_boot$detail$NST.boot$'C', probs = 0.975))
+NST_ants_D <- c('D', NST_ants_summary$'D'$NST.i.ruzicka, 
+                quantile(NST_ants_boot$detail$NST.boot$'D', probs = 0.025), 
+                quantile(NST_ants_boot$detail$NST.boot$'D', probs = 0.975))
+NST_ants_E <- c('E', NST_ants_summary$'E'$NST.i.ruzicka, 
+                quantile(NST_ants_boot$detail$NST.boot$'E', probs = 0.025), 
+                quantile(NST_ants_boot$detail$NST.boot$'E', probs = 0.975))
+NST_ants_F <- c('F', NST_ants_summary$'F'$NST.i.ruzicka, 
+                quantile(NST_ants_boot$detail$NST.boot$'F', probs = 0.025), 
+                quantile(NST_ants_boot$detail$NST.boot$'F', probs = 0.975))
+NST_ants_LF2 <- c('LF2', NST_ants_summary$'LF2'$NST.i.ruzicka, 
+                  quantile(NST_ants_boot$detail$NST.boot$'LF2', probs = 0.025), 
+                  quantile(NST_ants_boot$detail$NST.boot$'LF2', probs = 0.975))
+NST_ants_LF3 <- c('LF3', NST_ants_summary$'LF3'$NST.i.ruzicka, 
+                  quantile(NST_ants_boot$detail$NST.boot$'LF3', probs = 0.025), 
+                  quantile(NST_ants_boot$detail$NST.boot$'LF3', probs = 0.975))
+NST_ants_LFE <- c('LFE', NST_ants_summary$'LFE'$NST.i.ruzicka, 
+                  quantile(NST_ants_boot$detail$NST.boot$'LFE', probs = 0.025), 
+                  quantile(NST_ants_boot$detail$NST.boot$'LFE', probs = 0.975))
+NST_ants_VJR <- c('VJR', NST_ants_summary$'VJR'$NST.i.ruzicka, 
+                  quantile(NST_ants_boot$detail$NST.boot$'VJR', probs = 0.025), 
+                  quantile(NST_ants_boot$detail$NST.boot$'VJR', probs = 0.975))
+NST_ants_OG2 <- c('OG2', NST_ants_summary$'OG2'$NST.i.ruzicka, 
+                  quantile(NST_ants_boot$detail$NST.boot$'OG2', probs = 0.025), 
+                  quantile(NST_ants_boot$detail$NST.boot$'OG2', probs = 0.975))
+NST_ants_OG3 <- c('OG3', NST_ants_summary$'OG3'$NST.i.ruzicka, 
+                  quantile(NST_ants_boot$detail$NST.boot$'OG3', probs = 0.025), 
+                  quantile(NST_ants_boot$detail$NST.boot$'OG3', probs = 0.975))
+
+
+NST_ants_summary <- as.data.frame(rbind(NST_ants_A, NST_ants_B, NST_ants_C, NST_ants_D,
+                                        NST_ants_E, NST_ants_F, NST_ants_LF2, 
+                                        NST_ants_LF3, NST_ants_LFE, NST_ants_VJR, 
+                                        NST_ants_OG2, NST_ants_OG3))
+
+colnames(NST_ants_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NST_ants_summary) = 1:12
+
+NST_ants_summary$mean <- as.numeric(NST_ants_summary$mean)
+NST_ants_summary$lower.95.quant <- as.numeric(NST_ants_summary$lower.95.quant)
+NST_ants_summary$upper.95.quant <- as.numeric(NST_ants_summary$upper.95.quant)
+
+NST_ants_summary <- left_join(NST_ants_summary, ACD_ants_summary, by = "block")
+
+NST_ants_summary$range <- NST_ants_summary$upper.95.quant - NST_ants_summary$lower.95.quant
+NST_ants_summary
+
+mean(NST_ants_summary$mean)
+
+write.csv(NST_ants_summary, file = "NST_ants_summary.csv")
+
+##### RC - Raup-Crick #####
+
+RC_ants <- NST_ants$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+
+names(RC_ants)[names(RC_ants) == "name2"] <- "block_num"
+
+RC_ants <- separate(RC_ants, block_num, into = c("block", "num"))
+RC_ants$RC.ruzicka <- as.numeric(RC_ants$RC.ruzicka)
+RC_ants <- as.data.frame(RC_ants)
+
+# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
+RC_ants$RC.ruzicka <- abs(RC_ants$RC.ruzicka)
+
+# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
+RC_ants <- RC_ants %>% mutate(one_minus_RC = 1 - RC.ruzicka)
+# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
+names(RC_ants)[names(RC_ants) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
+names(RC_ants)[names(RC_ants) == "one_minus_RC"] <- "RC.ruzicka"
+
+## Calculate 95% quantiles by bootstrapping
+RC_ants <- RC_ants %>% select('block', 'RC.ruzicka') # Just need RC and block name
+
+RC_ants <- RC_ants %>% split( RC_ants$block) # Split so you can separately index each sampling block
+
+## Calculate mean and bootstrapped CIs for each sampling block
+RC_ants_summary_A <- c('A', mean(RC_ants$A$RC.ruzicka), bootstrap(RC_ants$A$RC.ruzicka))
+RC_ants_summary_B <- c('B', mean(RC_ants$B$RC.ruzicka), bootstrap(RC_ants$B$RC.ruzicka))
+RC_ants_summary_C <- c('C', mean(RC_ants$C$RC.ruzicka), bootstrap(RC_ants$C$RC.ruzicka))
+RC_ants_summary_D <- c('D', mean(RC_ants$D$RC.ruzicka), bootstrap(RC_ants$D$RC.ruzicka))
+RC_ants_summary_E <- c('E', mean(RC_ants$E$RC.ruzicka), bootstrap(RC_ants$E$RC.ruzicka))
+RC_ants_summary_F <- c('F', mean(RC_ants$F$RC.ruzicka), bootstrap(RC_ants$F$RC.ruzicka))
+RC_ants_summary_LF2 <- c('LF2', mean(RC_ants$LF2$RC.ruzicka), bootstrap(RC_ants$LF2$RC.ruzicka))
+RC_ants_summary_LF3 <- c('LF3', mean(RC_ants$LF3$RC.ruzicka), bootstrap(RC_ants$LF3$RC.ruzicka))
+RC_ants_summary_LFE <- c('LFE', mean(RC_ants$LFE$RC.ruzicka), bootstrap(RC_ants$LFE$RC.ruzicka))
+RC_ants_summary_VJR <- c('VJR', mean(RC_ants$VJR$RC.ruzicka), bootstrap(RC_ants$VJR$RC.ruzicka))
+RC_ants_summary_OG2 <- c('OG2', mean(RC_ants$OG2$RC.ruzicka), bootstrap(RC_ants$OG2$RC.ruzicka))
+RC_ants_summary_OG3 <- c('OG3', mean(RC_ants$OG3$RC.ruzicka), bootstrap(RC_ants$OG3$RC.ruzicka))
+
+
+## Combine these all into a dataframe
+RC_ants_summary <- as.data.frame(rbind(RC_ants_summary_A, RC_ants_summary_B, RC_ants_summary_C, RC_ants_summary_D, 
+                                       RC_ants_summary_E, RC_ants_summary_F,  RC_ants_summary_LF2, RC_ants_summary_LF3,
+                                       RC_ants_summary_LFE, RC_ants_summary_VJR, RC_ants_summary_OG2, RC_ants_summary_OG3))
+
+RC_ants_summary
+
+# Rename column and row headings
+colnames(RC_ants_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(RC_ants_summary) = 1:12
+
+# Add mean ACD
+RC_ants_summary <- left_join(RC_ants_summary, ACD_ants_summary, by = "block")
+
+RC_ants_summary$mean <- as.numeric(RC_ants_summary$mean)
+RC_ants_summary$lower.95.quant <- as.numeric(RC_ants_summary$lower.95.quant)
+RC_ants_summary$upper.95.quant <- as.numeric(RC_ants_summary$upper.95.quant)
+
+RC_ants_summary$range <- RC_ants_summary$upper.95.quant - RC_ants_summary$lower.95.quant
+
+mean(RC_ants_summary$mean)
+
+write.csv(RC_ants_summary, file = "Results/RC_ants_summary.csv")
+
+##### NTP - Neutral taxa percentage #####
+
+ants_composition_matrix <- as.data.frame(ants_composition_matrix)
+
+SNM_ants <- snm.comm(comm = ants_composition_matrix, treat = Sites_ants)
+SNM_ants$stats
+
+NTP_ants_data <- SNM_ants$ratio.summary  %>% filter(index == "mean")
+NTP_ants_data <- NTP_ants_data  %>% dplyr :: select(index, treatment.id, Neutral.wt)
+
+NTP_ants_data <- NTP_ants_data %>% split(NTP_ants_data$treatment.id)
+
+NTP_ants_A <- c('A', NTP_ants_data$`A`$Neutral.wt, 
+                quantile(SNM_ants$boot.detail$block$'A'$Neutral.wt, probs = 0.025), 
+                quantile(SNM_ants$boot.detail$block$'A'$Neutral.wt, probs = 0.975))
+NTP_ants_B <- c('B', NTP_ants_data$`B`$Neutral.wt, 
+                quantile(SNM_ants$boot.detail$block$'B'$Neutral.wt, probs = 0.025), 
+                quantile(SNM_ants$boot.detail$block$'B'$Neutral.wt, probs = 0.975))
+NTP_ants_C <- c('C', NTP_ants_data$`C`$Neutral.wt, 
+                quantile(SNM_ants$boot.detail$block$'C'$Neutral.wt, probs = 0.025), 
+                quantile(SNM_ants$boot.detail$block$'C'$Neutral.wt, probs = 0.975))
+NTP_ants_D <- c('D', NTP_ants_data$`D`$Neutral.wt, 
+                quantile(SNM_ants$boot.detail$block$'D'$Neutral.wt, probs = 0.025), 
+                quantile(SNM_ants$boot.detail$block$'D'$Neutral.wt, probs = 0.975))
+NTP_ants_E <- c('E', NTP_ants_data$`E`$Neutral.wt, 
+                quantile(SNM_ants$boot.detail$block$'E'$Neutral.wt, probs = 0.025), 
+                quantile(SNM_ants$boot.detail$block$'E'$Neutral.wt, probs = 0.975))
+NTP_ants_F <- c('F', NTP_ants_data$`F`$Neutral.wt, 
+                quantile(SNM_ants$boot.detail$block$'F'$Neutral.wt, probs = 0.025), 
+                quantile(SNM_ants$boot.detail$block$'F'$Neutral.wt, probs = 0.975))
+NTP_ants_LF2 <- c('LF2', NTP_ants_data$`LF2`$Neutral.wt, 
+                  quantile(SNM_ants$boot.detail$block$'LF2'$Neutral.wt, probs = 0.025), 
+                  quantile(SNM_ants$boot.detail$block$'LF2'$Neutral.wt, probs = 0.975))
+NTP_ants_LF3 <- c('LF3', NTP_ants_data$`LF3`$Neutral.wt, 
+                  quantile(SNM_ants$boot.detail$block$'LF3'$Neutral.wt, probs = 0.025), 
+                  quantile(SNM_ants$boot.detail$block$'LF3'$Neutral.wt, probs = 0.975))
+NTP_ants_LFE <- c('LFE', NTP_ants_data$`LFE`$Neutral.wt, 
+                  quantile(SNM_ants$boot.detail$block$'LFE'$Neutral.wt, probs = 0.025), 
+                  quantile(SNM_ants$boot.detail$block$'LFE'$Neutral.wt, probs = 0.975))
+NTP_ants_VJR <- c('VJR', NTP_ants_data$`VJR`$Neutral.wt, 
+                  quantile(SNM_ants$boot.detail$block$'VJR'$Neutral.wt, probs = 0.025), 
+                  quantile(SNM_ants$boot.detail$block$'VJR'$Neutral.wt, probs = 0.975))
+NTP_ants_OG2 <- c('OG2', NTP_ants_data$`OG2`$Neutral.wt, 
+                  quantile(SNM_ants$boot.detail$block$'OG2'$Neutral.wt, probs = 0.025), 
+                  quantile(SNM_ants$boot.detail$block$'OG2'$Neutral.wt, probs = 0.975))
+NTP_ants_OG3 <- c('OG3', NTP_ants_data$`OG3`$Neutral.wt, 
+                  quantile(SNM_ants$boot.detail$block$'OG3'$Neutral.wt, probs = 0.025), 
+                  quantile(SNM_ants$boot.detail$block$'OG3'$Neutral.wt, probs = 0.975))
+
+NTP_ants_summary <- as.data.frame(rbind(NTP_ants_A, NTP_ants_B, NTP_ants_C, NTP_ants_D,
+                                        NTP_ants_E, NTP_ants_F, NTP_ants_LF2, 
+                                        NTP_ants_LF3, NTP_ants_LFE, NTP_ants_VJR, 
+                                        NTP_ants_OG2, NTP_ants_OG3))
+
+NTP_ants_summary
+
+
+# Rename column and row headings
+colnames(NTP_ants_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NTP_ants_summary) = 1:12
+
+# Add mean ACD
+NTP_ants_summary <- left_join(NTP_ants_summary, ACD_ants_summary, by = "block")
+
+
+str(NTP_ants_summary)
+NTP_ants_summary$mean <- as.numeric(NTP_ants_summary$mean)
+NTP_ants_summary$lower.95.quant <- as.numeric(NTP_ants_summary$lower.95.quant)
+NTP_ants_summary$upper.95.quant <- as.numeric(NTP_ants_summary$upper.95.quant)
+
+
+
+NTP_ants_summary$range <- NTP_ants_summary$upper.95.quant - NTP_ants_summary$lower.95.quant
+
+mean(NTP_ants_summary$mean)
+
+write.csv(NTP_ants_summary, file = "Results/NTP_ants_summary.csv")
+
+
+##### iCAMP - inferring community assembly mechanisms by phylogenetic bin-based null model analysis #####
+
+# Phylogeny
+ants_phylo <- get_phylogeny(3876227)
+ants_tips <-  intersect(ants_phylo[["tip.labels"]], colnames(ants_composition_matrix))
+ants_phylo <- ape::keep.tip(ants_phylo, ants_tips)
+ants_phylo$tip.labels <- NULL
+ants_phylo$node.labels <- NULL
+
+# Root the tree
+ants_phylo_rooted <- phytools :: midpoint.root(ants_phylo)
+
+#  Phylogenetic distance matrix.
+save.wd = "iCAMP outputs/Ants iCAMP outputs"
+
+# Phylogenetic distance matrix
+pd.ants = pdist.big(tree = ants_phylo_rooted, wd=save.wd, nworker = 8, memory.G = 500)
+
+# iCAMP
+iCAMP_ants =iCAMP::icamp.big(comm=ants_composition_matrix, pd.desc = pd.ants$pd.file, pd.spname=pd.ants$tip.label,
+                                   pd.wd = save.wd, rand = 500, tree=ants_phylo_rooted,
+                                   prefix = 'ants', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                                   phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                                   phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                                   nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                                   qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                                   correct.special = TRUE, unit.sum = rowSums(ants_composition_matrix), special.method = "depend",
+                                   ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+iCAMP_ants
+
+## Calculate mean of each process in each sampling block
+iCAMP_ants_processes <- as.data.frame(iCAMP_ants$detail$processes)
+
+colnames(iCAMP_ants_processes)
+colnames(iCAMP_ants_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+iCAMP_ants_processes <- tidyr::separate(iCAMP_ants_processes, sample2, into = c("block", "num")) 
+
+#iCAMP_ants_processes_summary <- as.data.frame(iCAMP_ants_processes %>% group_by(block) %>% summarise('Heterogeneous selection' = mean(HeS),
+                                                                                                     'Homogeneous selection' = mean(HoS), 
+                                                                                                   'Dispersal limitation' = mean(DL),
+                                                                                                   'Homogenizing dispersal'= mean(HoD),
+                                                                                                  'Drift' = mean(Dr)))
+
+iCAMP_ants_processes_summary <- as.data.frame(iCAMP_ants_processes %>% group_by(block) %>% 
+                  summarise('mean_HeS' = mean(HeS),
+                            'mean_HoS' = mean(HoS), 
+                            'mean_DL' = mean(DL),
+                            'mean_HoD'= mean(HoD),
+                            'mean_Dr' = mean(Dr)))
+
+#Join with log ACD
+iCAMP_ants_processes_summary <- left_join(iCAMP_ants_processes_summary, ACD_ants_summary, by = 'block')
+
+write.csv(iCAMP_ants_summary, file = "Results/iCAMP_ants_summary.csv")
+
+## Phylogenetic bins
+iCAMP_ants$detail$taxabin$state.united$bin.united.tax.num # number of taxa in each bin
+iCAMP_ants$detail$taxabin$sp.bin # shows which species are in each bin
+
+## Plot tree and show bins
+ggtree(ants_phylo) +
+  geom_tiplab(size = 2.8) +
+  geom_nodelab(size = 2.9, nudge_x =-0.5, nudge_y = 1.2) +
+  geom_strip('sp_18', 'sp_220', barsize = 2, color = 'red', 
+             label = 'Bin 2', offset = 1.6, offset.text = 0.1) +
+  geom_strip('sp_22', 'sp_181', barsize = 2, color = 'chartreuse3', 
+             label = 'Bin 3', offset = 1.6, offset.text = 0.1) +
+  geom_strip('sp_31', 'sp_210', barsize = 2, color = 'purple', 
+             label = 'Bin 4', offset = 1.6, offset.text = 0.1) +
+  geom_strip('sp_10', 'sp_206', barsize = 2, color = 'orange2', 
+             label = 'Bin 5', offset = 1.6, offset.text = 0.1) +
+  geom_strip('sp_23', 'sp_201', barsize = 2, color = 'deeppink', 
+             label = 'Bin 6', offset = 1.6, offset.text = 0.1) +
+  geom_strip('sp_204', 'unid_sp_1', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  xlim(0,5) +
+  ggtitle("Ants") +
+  theme(plot.margin = unit(c(2,0.1,0.5,0.1), "cm"),
+        plot.title = element_text(size = 15))
+
+ggsave("AntsTree.pdf", width = 15, height = 57, units = "cm")
+
+
+
+#########################################################################################################
+################################### Orthoptera ##########################################################
+#########################################################################################################
+
+## Orthoptera abundance data collected by Jane Hardwick et al. https://doi.org/10.5281/zenodo.7011354
+orthoptera_composition_matrix <- load_safe_data(7011354, 'OrthopteraAssem')
+
+orthoptera_composition_matrix <- subset(orthoptera_composition_matrix, select = -c( Date1, Date2, Type, Collector)) 
+rownames(orthoptera_composition_matrix) <- orthoptera_composition_matrix[, 1] #Set rownames as first column (site names)
+orthoptera_composition_matrix <- orthoptera_composition_matrix[, -1] # Remove first column
+
+# Remove oil palm plantations
+orthoptera_composition_matrix <- orthoptera_composition_matrix[ grep("OP", rownames(orthoptera_composition_matrix), invert = TRUE) , ]
+
+# Remove taxa (columns) with an abundance of zero - these are taxa that were only found in oil palm plantations (the NTP analysis doesn't work if these taxa are included)
+orthoptera_composition_matrix <- orthoptera_composition_matrix[, which(colSums(orthoptera_composition_matrix) != 0)]
+
+# Remove the word 'count' from morphospecies names
+colnames(orthoptera_composition_matrix) <- gsub("_count", "", colnames(orthoptera_composition_matrix))
+
+## ACD - above-ground carbon density data derived from LiDAR by Swinfield et al., 2014 https://doi.org/10.5281/zenodo.4020697 
+# Select only sites that are in orthoptera_composition_matrix
+ACD_orthoptera <- subset(ACD_all, ACD_all$ID %in% rownames(orthoptera_composition_matrix))
+
+# Calculate mean ACD
+library(tidyr)
+ACD_orthoptera <- separate(ACD_orthoptera, ID, into = c("block", "num"), remove = FALSE)
+library(dplyr)
+ACD_orthoptera <- as.data.frame(ACD_orthoptera %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+
+# Create summarised table to be used for plotting and regression
+ACD_orthoptera_summary <- as.data.frame(ACD_orthoptera %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+ACD_orthoptera_summary 
+
+# Just sampling block names to be used for analysis
+Sites_orthoptera <- subset(ACD_orthoptera, select = c(ID, block))
+rownames(Sites_orthoptera) <- Sites_orthoptera[, 1]
+Sites_orthoptera <- subset(Sites_orthoptera, select = block)
+Sites_orthoptera
+
+
+##### NST - normalised stochasticity ratio #####
+NST_orthoptera <- tNST(orthoptera_composition_matrix, Sites_orthoptera, dist.method = "ruzicka", output.rand = TRUE, RC = TRUE)
+mean(NST_orthoptera$index.grp$NST.i.ruzicka)
+
+NST_orthoptera_summary <- subset(NST_orthoptera$index.grp, select = c(group, NST.i.ruzicka))
+NST_orthoptera_summary <- NST_orthoptera_summary %>% split(NST_orthoptera_summary$group) # Split so you can separately index each sampling block
+NST_orthoptera_summary
+
+# Bootstrapping
+NST_orthoptera_boot <- nst.boot(NST_orthoptera, out.detail = TRUE, nworker = 2)
+NST_orthoptera_boot
+
+# Taking the 95th quantiles of the bootstrapping list for each sampling block
+# The bootstrapping list is the results of each random draw
+NST_orthoptera_boot$detail
+
+NST_orthoptera_B <- c('B', NST_orthoptera_summary$'B'$NST.i.ruzicka, 
+                      quantile(NST_orthoptera_boot$detail$NST.boot$'B', probs = 0.025), 
+                      quantile(NST_orthoptera_boot$detail$NST.boot$'B', probs = 0.975))
+NST_orthoptera_C <- c('C', NST_orthoptera_summary$'C'$NST.i.ruzicka, 
+                      quantile(NST_orthoptera_boot$detail$NST.boot$'C', probs = 0.025), 
+                      quantile(NST_orthoptera_boot$detail$NST.boot$'C', probs = 0.975))
+NST_orthoptera_D <- c('D', NST_orthoptera_summary$'D'$NST.i.ruzicka, 
+                      quantile(NST_orthoptera_boot$detail$NST.boot$'D', probs = 0.025), 
+                      quantile(NST_orthoptera_boot$detail$NST.boot$'D', probs = 0.975))
+NST_orthoptera_F <- c('F', NST_orthoptera_summary$'F'$NST.i.ruzicka, 
+                      quantile(NST_orthoptera_boot$detail$NST.boot$'F', probs = 0.025), 
+                      quantile(NST_orthoptera_boot$detail$NST.boot$'F', probs = 0.975))
+NST_orthoptera_OG2 <- c('OG2', NST_orthoptera_summary$'OG2'$NST.i.ruzicka, 
+                        quantile(NST_orthoptera_boot$detail$NST.boot$'OG2', probs = 0.025), 
+                        quantile(NST_orthoptera_boot$detail$NST.boot$'OG2', probs = 0.975))
+NST_orthoptera_OG3 <- c('OG3', NST_orthoptera_summary$'OG3'$NST.i.ruzicka, 
+                        quantile(NST_orthoptera_boot$detail$NST.boot$'OG3', probs = 0.025), 
+                        quantile(NST_orthoptera_boot$detail$NST.boot$'OG3', probs = 0.975))
+
+
+NST_orthoptera_summary <- as.data.frame(rbind(NST_orthoptera_B, NST_orthoptera_C, NST_orthoptera_D,
+                                              NST_orthoptera_F,
+                                              NST_orthoptera_OG2, NST_orthoptera_OG3))
+
+colnames(NST_orthoptera_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NST_orthoptera_summary) = 1:6
+
+NST_orthoptera_summary$mean <- as.numeric(NST_orthoptera_summary$mean)
+NST_orthoptera_summary$lower.95.quant <- as.numeric(NST_orthoptera_summary$lower.95.quant)
+NST_orthoptera_summary$upper.95.quant <- as.numeric(NST_orthoptera_summary$upper.95.quant)
+
+NST_orthoptera_summary <- left_join(NST_orthoptera_summary, ACD_orthoptera_summary, by = "block")
+
+NST_orthoptera_summary$range <- NST_orthoptera_summary$upper.95.quant - NST_orthoptera_summary$lower.95.quant
+NST_orthoptera_summary
+
+write.csv(NST_orthoptera_summary, file = "Results/NST_orthoptera_summary.csv")
+
+##### RC - Raup-Crick #####
+
+RC_orthoptera <- NST_orthoptera$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+
+names(RC_orthoptera)[names(RC_orthoptera) == "name2"] <- "block_num"
+
+RC_orthoptera <- separate(RC_orthoptera, block_num, into = c("block", "num"))
+RC_orthoptera$RC.ruzicka <- as.numeric(RC_orthoptera$RC.ruzicka)
+
+# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
+RC_orthoptera$RC.ruzicka <- abs(RC_orthoptera$RC.ruzicka)
+
+# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
+RC_orthoptera <- RC_orthoptera %>% mutate(one_minus_RC = 1 - RC.ruzicka)
+# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
+names(RC_orthoptera)[names(RC_orthoptera) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
+names(RC_orthoptera)[names(RC_orthoptera) == "one_minus_RC"] <- "RC.ruzicka"
+
+## Calculate 95% quantiles by bootstrapping
+RC_orthoptera <- RC_orthoptera %>% select('block', 'RC.ruzicka') # Just need RC and block name
+
+RC_orthoptera <- RC_orthoptera %>% split( RC_orthoptera$block) # Split so you can separately index each sampling block
+
+## Calculate mean and bootstrapped CIs for each sampling block
+RC_orthoptera_summary_B <- c('B', mean(RC_orthoptera$B$RC.ruzicka), bootstrap(RC_orthoptera$B$RC.ruzicka))
+RC_orthoptera_summary_C <- c('C', mean(RC_orthoptera$C$RC.ruzicka), bootstrap(RC_orthoptera$C$RC.ruzicka))
+RC_orthoptera_summary_D <- c('D', mean(RC_orthoptera$D$RC.ruzicka), bootstrap(RC_orthoptera$D$RC.ruzicka))
+RC_orthoptera_summary_F <- c('F', mean(RC_orthoptera$F$RC.ruzicka), bootstrap(RC_orthoptera$F$RC.ruzicka))
+RC_orthoptera_summary_OG2 <- c('OG2', mean(RC_orthoptera$OG2$RC.ruzicka), bootstrap(RC_orthoptera$OG2$RC.ruzicka))
+RC_orthoptera_summary_OG3 <- c('OG3', mean(RC_orthoptera$OG3$RC.ruzicka), bootstrap(RC_orthoptera$OG3$RC.ruzicka))
+
+## Combine these all into a dataframe
+RC_orthoptera_summary <- as.data.frame(rbind(RC_orthoptera_summary_B, RC_orthoptera_summary_C, RC_orthoptera_summary_D, 
+                                             RC_orthoptera_summary_F, RC_orthoptera_summary_OG2, RC_orthoptera_summary_OG3))
+                                             
+# Rename column and row headings
+colnames(RC_orthoptera_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(RC_orthoptera_summary) = 1:6
+
+# Add mean ACD
+RC_orthoptera_summary <- left_join(RC_orthoptera_summary, ACD_orthoptera_summary, by = "block")
+
+RC_orthoptera_summary$mean <- as.numeric(RC_orthoptera_summary$mean)
+RC_orthoptera_summary$lower.95.quant <- as.numeric(RC_orthoptera_summary$lower.95.quant)
+RC_orthoptera_summary$upper.95.quant <- as.numeric(RC_orthoptera_summary$upper.95.quant)
+
+RC_orthoptera_summary$range <- RC_orthoptera_summary$upper.95.quant - RC_orthoptera_summary$lower.95.quant
+
+write.csv(RC_orthoptera_summary, file = "Results/RC_orthoptera_summary.csv")
+
+##### NTP - Neutral taxa percentage #####
+
+orthoptera_composition_matrix <- as.data.frame(orthoptera_composition_matrix)
+
+# Fit Sloan's neutral model
+SNM_orthoptera <- snm.comm(comm = orthoptera_composition_matrix, treat = Sites_orthoptera)
+NTP_orthoptera_data <- SNM_orthoptera$ratio.summary  %>% filter(index == "mean")
+NTP_orthoptera_data <- NTP_orthoptera_data  %>% dplyr :: select(index, treatment.id, Neutral.wt)
+
+NTP_orthoptera_data <- NTP_orthoptera_data %>% split(NTP_orthoptera_data$treatment.id)
+
+NTP_orthoptera_B <- c('B', NTP_orthoptera_data$`B`$Neutral.wt, 
+                      quantile(SNM_orthoptera$boot.detail$block$'B'$Neutral.wt, probs = 0.025), 
+                      quantile(SNM_orthoptera$boot.detail$block$'B'$Neutral.wt, probs = 0.975))
+NTP_orthoptera_C <- c('C', NTP_orthoptera_data$`C`$Neutral.wt, 
+                      quantile(SNM_orthoptera$boot.detail$block$'C'$Neutral.wt, probs = 0.025), 
+                      quantile(SNM_orthoptera$boot.detail$block$'C'$Neutral.wt, probs = 0.975))
+NTP_orthoptera_D <- c('D', NTP_orthoptera_data$`D`$Neutral.wt, 
+                      quantile(SNM_orthoptera$boot.detail$block$'D'$Neutral.wt, probs = 0.025), 
+                      quantile(SNM_orthoptera$boot.detail$block$'D'$Neutral.wt, probs = 0.975))
+NTP_orthoptera_F <- c('F', NTP_orthoptera_data$`F`$Neutral.wt, 
+                      quantile(SNM_orthoptera$boot.detail$block$'F'$Neutral.wt, probs = 0.025), 
+                      quantile(SNM_orthoptera$boot.detail$block$'F'$Neutral.wt, probs = 0.975))
+NTP_orthoptera_OG2 <- c('OG2', NTP_orthoptera_data$`OG2`$Neutral.wt, 
+                        quantile(SNM_orthoptera$boot.detail$block$'OG2'$Neutral.wt, probs = 0.025), 
+                        quantile(SNM_orthoptera$boot.detail$block$'OG2'$Neutral.wt, probs = 0.975))
+NTP_orthoptera_OG3 <- c('OG3', NTP_orthoptera_data$`OG3`$Neutral.wt, 
+                        quantile(SNM_orthoptera$boot.detail$block$'OG3'$Neutral.wt, probs = 0.025), 
+                        quantile(SNM_orthoptera$boot.detail$block$'OG3'$Neutral.wt, probs = 0.975))
+
+NTP_orthoptera_summary <- as.data.frame(rbind(NTP_orthoptera_B, NTP_orthoptera_C, NTP_orthoptera_D,
+                                              NTP_orthoptera_F, 
+                                              NTP_orthoptera_OG2, NTP_orthoptera_OG3))
+
+NTP_orthoptera_summary
+
+# Rename column and row headings
+colnames(NTP_orthoptera_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NTP_orthoptera_summary) = 1:6
+
+# Add mean ACD
+NTP_orthoptera_summary <- left_join(NTP_orthoptera_summary, ACD_orthoptera_summary, by = "block")
+NTP_orthoptera_summary$mean <- as.numeric(NTP_orthoptera_summary$mean)
+NTP_orthoptera_summary$lower.95.quant <- as.numeric(NTP_orthoptera_summary$lower.95.quant)
+NTP_orthoptera_summary$upper.95.quant <- as.numeric(NTP_orthoptera_summary$upper.95.quant)
+
+NTP_orthoptera_summary$range <- NTP_orthoptera_summary$upper.95.quant - NTP_orthoptera_summary$lower.95.quant
+
+write.csv(NTP_orthoptera_summary, file = "Results/NTP_orthoptera_summary.csv")
+
+
+##### iCAMP - inferring community assembly mechanisms by phylogenetic bin-based null model analysis #####
+# Phylogeny 
+orthoptera_tips <-  intersect(orthoptera_phylo[["tip.labels"]], colnames(orthoptera_composition_matrix))
+orthoptera_phylo <- ape::keep.tip(orthoptera_phylo, orthoptera_tips)
+orthoptera_phylo$tip.labels <- NULL
+orthoptera_phylo$node.labels <- NULL
+
+# Root the tree
+orthoptera_phylo_rooted <- phytools :: midpoint.root(orthoptera_phylo)
+
+save.wd = "iCAMP outputs/Orthoptera iCAMP outputs"
+
+# Phylogenetic distance matrix
+pd.orthoptera = pdist.big(tree = orthoptera_phylo_rooted, wd=getwd(), nworker = 8, memory.G = 500)
+
+# iCAMP
+iCAMP_orthoptera =iCAMP::icamp.big(comm=orthoptera_composition_matrix, pd.desc = pd.orthoptera$pd.file, pd.spname=pd.orthoptera$tip.label,
+                                   pd.wd = save.wd, rand = 500, tree=orthoptera_phylo_rooted,
+                                   prefix = 'Orthoptera', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                                   phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                                   phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                                   nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                                   qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                                   correct.special = TRUE, unit.sum = rowSums(orthoptera_composition_matrix), special.method = "depend",
+                                   ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+iCAMP_orthoptera 
+
+
+iCAMP_orthoptera_processes <- as.data.frame(iCAMP_orthoptera$detail$processes)
+
+# Calculate mean of each process in each sampling block 
+colnames(iCAMP_orthoptera_processes)
+colnames(iCAMP_orthoptera_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+iCAMP_orthoptera_processes
+colMeans(iCAMP_orthoptera_processes[3:7])
+
+iCAMP_orthoptera_processes <- separate(iCAMP_orthoptera_processes, sample2, into = c("block", "num")) 
+
+iCAMP_orthoptera_processes_summary <- as.data.frame(iCAMP_orthoptera_processes %>% group_by(block) %>% summarise(mean_HeS = mean(HeS),
+                                                                                                                 mean_HoS = mean(HoS), 
+                                                                                                                 mean_DL = mean(DL),
+                                                                                                                 mean_HoD = mean(HoD),
+                                                                                                                 mean_Dr = mean(Dr)))
+colMeans(iCAMP_orthoptera_processes_summary[2:6])
+
+# Join with log ACD 
+iCAMP_orthoptera_processes_summary <- left_join(iCAMP_orthoptera_processes_summary, ACD_orthoptera_summary, by = 'block')
+write.csv(iCAMP_orthoptera_processes_summary , file = "Results/iCAMP_orthoptera_processes_summary.csv")
+
+## Phylogenetic bins
+iCAMP_orthoptera$detail$taxabin$state.united # the row numbering is the final bin ID, the 1st column is orginal bin IDs, the 2nd column is the taxa number in each final bin, the 3rd to 5th columns show the maximum, mean, and standard deviation of phylogenetic distances within each final bin
+iCAMP_orthoptera$detail$taxabin$sp.bin # shows which species are in each bin
+
+## Plot tree and show bins
+library(ggtree)
+ggtree(orthoptera_phylo) +
+  geom_tiplab(size = 3) +
+  geom_nodelab(size = 3, nudge_x =-0.5, nudge_y = 1.2) +
+  geom_strip('TETR05', 'TETR21', barsize = 2, color = 'red', 
+             label = 'Bin 2', offset = 1.6, offset.text = 0.1) +
+  geom_strip('GRYL01', 'GRYL21', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  geom_strip('TRIG06', 'UNID01', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  xlim(0,5) +
+  ggtitle('Orthoptera') +
+  theme(plot.margin = unit(c(0.1,0.1,0.5,0.1), "cm"),
+        plot.title = element_text(size = 15))
+ggsave("OrthopteraTree.pdf", width = 15, height = 55, units = "cm")
+
+
+####################################################################################################
+###################################### Spiders #####################################################
+#####################################################################################################
+
+## Spider abundance data collected by Sarah Maunsell et al. https://doi.org/10.5281/zenodo.4139685
+# Load the spiders data
+spiders_composition_matrix <- load_safe_data(4139685, 'SpiderAssem')
+
+# Remove non-relevant columns
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = -c(Date, Type))
+
+# Set site names as rownames
+rownames(spiders_composition_matrix) <- spiders_composition_matrix$Location
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = - Location)
+
+# Remove oil palm
+spiders_composition_matrix <- spiders_composition_matrix[ grep("OP", rownames(spiders_composition_matrix), invert = TRUE) , ] 
+
+# Remove the word 'count' from the morphospecies names
+colnames(spiders_composition_matrix) <- gsub("_count", "", colnames(spiders_composition_matrix))
+
+# Remove taxa (columns) whose abundance is zero (maybe these are taxa that were only found in OP?)
+colSums(spiders_composition_matrix)
+spiders_composition_matrix <- spiders_composition_matrix[, which(colSums(spiders_composition_matrix) != 0)]
+colSums(spiders_composition_matrix)
+
+# Remove taxa that are not in the phylogeny for spiders, therefore also not in the iCAMP analysis
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = -c(GNA01, HER01, PIS01, TEB01, SCY01, THS01))
+
+sum(colSums(spiders_composition_matrix)) # number of individuals
+ncol(spiders_composition_matrix) # number of species
+nrow(spiders_composition_matrix) # number of sites
+
+## ACD - above-ground carbon density data derived from LiDAR by Swinfield et al., 2014 https://doi.org/10.5281/zenodo.4020697 
+# Select only sites that are in spiders_composition_matrix
+ACD_spiders <- subset(ACD_all, ACD_all$ID %in% rownames(spiders_composition_matrix))
+
+# Calculate mean ACD
+library(tidyr)
+ACD_spiders <- separate(ACD_spiders, ID, into = c("block", "num"), remove = FALSE)
+ACD_spiders <- as.data.frame(ACD_spiders %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+
+# Create summarised table to be used for plotting and regression
+ACD_spiders_summary <- as.data.frame(ACD_spiders %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+# Just sampling block names to be used for analysis
+Sites_spiders <- subset(ACD_spiders, select = c(ID, block))
+rownames(Sites_spiders) <- Sites_spiders[, 1]
+Sites_spiders <- subset(Sites_spiders, select = block)
+
+##### NST - normalised stochasticity ratio #####
+NST_spiders <- tNST(spiders_composition_matrix, Sites_spiders, dist.method = "ruzicka", output.rand = TRUE, RC = TRUE)
+NST_spiders$index.grp
+
+mean(NST_spiders$index.grp$NST.i.ruzicka)
+
+NST_spiders_summary <- subset(NST_spiders$index.grp,  select = c(group, NST.i.ruzicka))
+NST_spiders_summary <- NST_spiders_summary %>% split(NST_spiders_summary$group) # Split so you can separately index each sampling block
+
+# Bootstrapping
+NST_spiders_boot <- nst.boot(NST_spiders, out.detail = TRUE, nworker = 2)
+NST_spiders_boot
+
+# Taking the 95th quantiles of the bootstrapping list for each sampling block
+# The bootstrapping list is the results of each random draw
+NST_spiders_boot$detail
+
+NST_spiders_A <- c('A', NST_spiders_summary$'A'$NST.i.ruzicka, 
+                   quantile(NST_spiders_boot$detail$NST.boot$'A', probs = 0.025), 
+                   quantile(NST_spiders_boot$detail$NST.boot$'A', probs = 0.975))
+NST_spiders_B <- c('B', NST_spiders_summary$'B'$NST.i.ruzicka, 
+                   quantile(NST_spiders_boot$detail$NST.boot$'B', probs = 0.025), 
+                   quantile(NST_spiders_boot$detail$NST.boot$'B', probs = 0.975))
+NST_spiders_C <- c('C', NST_spiders_summary$'C'$NST.i.ruzicka, 
+                   quantile(NST_spiders_boot$detail$NST.boot$'C', probs = 0.025), 
+                   quantile(NST_spiders_boot$detail$NST.boot$'C', probs = 0.975))
+NST_spiders_D <- c('D', NST_spiders_summary$'D'$NST.i.ruzicka, 
+                   quantile(NST_spiders_boot$detail$NST.boot$'D', probs = 0.025), 
+                   quantile(NST_spiders_boot$detail$NST.boot$'D', probs = 0.975))
+NST_spiders_E <- c('E', NST_spiders_summary$'E'$NST.i.ruzicka, 
+                   quantile(NST_spiders_boot$detail$NST.boot$'E', probs = 0.025), 
+                   quantile(NST_spiders_boot$detail$NST.boot$'E', probs = 0.975))
+NST_spiders_F <- c('F', NST_spiders_summary$'F'$NST.i.ruzicka, 
+                   quantile(NST_spiders_boot$detail$NST.boot$'F', probs = 0.025), 
+                   quantile(NST_spiders_boot$detail$NST.boot$'F', probs = 0.975))
+NST_spiders_LF1 <- c('LF1', NST_spiders_summary$'LF1'$NST.i.ruzicka, 
+                     quantile(NST_spiders_boot$detail$NST.boot$'LF1', probs = 0.025), 
+                     quantile(NST_spiders_boot$detail$NST.boot$'LF1', probs = 0.975))
+NST_spiders_LF2 <- c('LF2', NST_spiders_summary$'LF2'$NST.i.ruzicka, 
+                     quantile(NST_spiders_boot$detail$NST.boot$'LF2', probs = 0.025), 
+                     quantile(NST_spiders_boot$detail$NST.boot$'LF2', probs = 0.975))
+NST_spiders_OG2 <- c('OG2', NST_spiders_summary$'OG2'$NST.i.ruzicka, 
+                     quantile(NST_spiders_boot$detail$NST.boot$'OG2', probs = 0.025), 
+                     quantile(NST_spiders_boot$detail$NST.boot$'OG2', probs = 0.975))
+NST_spiders_OG3 <- c('OG3', NST_spiders_summary$'OG3'$NST.i.ruzicka, 
+                     quantile(NST_spiders_boot$detail$NST.boot$'OG3', probs = 0.025), 
+                     quantile(NST_spiders_boot$detail$NST.boot$'OG3', probs = 0.975))
+NST_spiders_summary <- as.data.frame(rbind(NST_spiders_A, NST_spiders_B, NST_spiders_C, NST_spiders_D,
+                                           NST_spiders_E, NST_spiders_F, NST_spiders_LF1, NST_spiders_LF2, 
+                                           NST_spiders_OG2, NST_spiders_OG3))
+
+colnames(NST_spiders_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NST_spiders_summary) = 1:10
+
+str(NST_spiders_summary)
+
+NST_spiders_summary$mean <- as.numeric(NST_spiders_summary$mean)
+NST_spiders_summary$lower.95.quant <- as.numeric(NST_spiders_summary$lower.95.quant)
+NST_spiders_summary$upper.95.quant <- as.numeric(NST_spiders_summary$upper.95.quant)
+
+NST_spiders_summary <- left_join(NST_spiders_summary, ACD_spiders_summary, by = "block")
+
+NST_spiders_summary$range <- NST_spiders_summary$upper.95.quant - NST_spiders_summary$lower.95.quant
+NST_spiders_summary
+
+mean(NST_spiders_summary$mean)
+
+write.csv(NST_spiders_summary, file = "Results/NST_spiders_summary.csv")
+
+##### RC - Raup-Crick #####
+RC_spiders <- NST_spiders$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+names(RC_spiders)[names(RC_spiders) == "name2"] <- "block_num"
+
+RC_spiders <- separate(RC_spiders, block_num, into = c("block", "num"))
+RC_spiders$RC.ruzicka <- as.numeric(RC_spiders$RC.ruzicka)
+
+# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
+RC_spiders$RC.ruzicka <- abs(RC_spiders$RC.ruzicka)
+
+# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
+RC_spiders <- RC_spiders %>% mutate(one_minus_RC = 1 - RC.ruzicka)
+# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
+names(RC_spiders)[names(RC_spiders) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
+names(RC_spiders)[names(RC_spiders) == "one_minus_RC"] <- "RC.ruzicka"
+
+## Calculate 95% quantiles by bootstrapping
+RC_spiders <- RC_spiders %>% select('block', 'RC.ruzicka') # Just need RC and block name
+RC_spiders <- RC_spiders %>% split( RC_spiders$block) # Split so you can separately index each sampling block
+
+## Calculate mean and bootstrapped CIs for each sampling block
+RC_spiders_summary_A <- c('A', mean(RC_spiders$A$RC.ruzicka), bootstrap(RC_spiders$A$RC.ruzicka))
+RC_spiders_summary_B <- c('B', mean(RC_spiders$B$RC.ruzicka), bootstrap(RC_spiders$B$RC.ruzicka))
+RC_spiders_summary_C <- c('C', mean(RC_spiders$C$RC.ruzicka), bootstrap(RC_spiders$C$RC.ruzicka))
+RC_spiders_summary_D <- c('D', mean(RC_spiders$D$RC.ruzicka), bootstrap(RC_spiders$D$RC.ruzicka))
+RC_spiders_summary_E <- c('E', mean(RC_spiders$E$RC.ruzicka), bootstrap(RC_spiders$E$RC.ruzicka))
+RC_spiders_summary_F <- c('F', mean(RC_spiders$F$RC.ruzicka), bootstrap(RC_spiders$F$RC.ruzicka))
+RC_spiders_summary_LF1 <- c('LF1', mean(RC_spiders$LF1$RC.ruzicka), bootstrap(RC_spiders$LF1$RC.ruzicka))
+RC_spiders_summary_LF2 <- c('LF2', mean(RC_spiders$LF2$RC.ruzicka), bootstrap(RC_spiders$LF2$RC.ruzicka))
+RC_spiders_summary_OG2 <- c('OG2', mean(RC_spiders$OG2$RC.ruzicka), bootstrap(RC_spiders$OG2$RC.ruzicka))
+RC_spiders_summary_OG3 <- c('OG3', mean(RC_spiders$OG3$RC.ruzicka), bootstrap(RC_spiders$OG3$RC.ruzicka))
+
+## Combine these all into a dataframe
+RC_spiders_summary <- as.data.frame(rbind(RC_spiders_summary_A, RC_spiders_summary_B, RC_spiders_summary_C, RC_spiders_summary_D, 
+                                          RC_spiders_summary_E, RC_spiders_summary_F, RC_spiders_summary_LF1, RC_spiders_summary_LF2, 
+                                          RC_spiders_summary_OG2, RC_spiders_summary_OG3))
+
+RC_spiders_summary
+
+# Rename column and row headings
+colnames(RC_spiders_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(RC_spiders_summary) = 1:10
+# Add mean ACD
+RC_spiders_summary <- left_join(RC_spiders_summary, ACD_spiders_summary, by = "block")
+
+str(RC_spiders_summary)
+RC_spiders_summary$mean <- as.numeric(RC_spiders_summary$mean)
+RC_spiders_summary$lower.95.quant <- as.numeric(RC_spiders_summary$lower.95.quant)
+RC_spiders_summary$upper.95.quant <- as.numeric(RC_spiders_summary$upper.95.quant)
+
+RC_spiders_summary$range <- RC_spiders_summary$upper.95.quant - RC_spiders_summary$lower.95.quant
+
+mean(RC_spiders_summary$mean)
+
+write.csv(RC_spiders_summary, file = "Results/RC_spiders_summary.csv")
+
+##### NTP - Neutral taxa percentage #####
+
+spiders_composition_matrix <- as.data.frame(spiders_composition_matrix)
+str(spiders_composition_matrix)
+
+# Fit Sloan's neutral model
+SNM_spiders <- snm.comm(comm = spiders_composition_matrix, treat = Sites_spiders)
+NTP_spiders_data <- SNM_spiders$ratio.summary  %>% filter(index == "mean")
+NTP_spiders_data <- NTP_spiders_data  %>% dplyr :: select(index, treatment.id, Neutral.wt)
+
+NTP_spiders_data <- NTP_spiders_data %>% split(NTP_spiders_data$treatment.id)
+
+NTP_spiders_A <- c('A', NTP_spiders_data$`A`$Neutral.wt, 
+                   quantile(SNM_spiders$boot.detail$block$'A'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_spiders$boot.detail$block$'A'$Neutral.wt, probs = 0.975))
+NTP_spiders_B <- c('B', NTP_spiders_data$`B`$Neutral.wt, 
+                   quantile(SNM_spiders$boot.detail$block$'B'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_spiders$boot.detail$block$'B'$Neutral.wt, probs = 0.975))
+NTP_spiders_C <- c('C', NTP_spiders_data$`C`$Neutral.wt, 
+                   quantile(SNM_spiders$boot.detail$block$'C'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_spiders$boot.detail$block$'C'$Neutral.wt, probs = 0.975))
+NTP_spiders_D <- c('D', NTP_spiders_data$`D`$Neutral.wt, 
+                   quantile(SNM_spiders$boot.detail$block$'D'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_spiders$boot.detail$block$'D'$Neutral.wt, probs = 0.975))
+NTP_spiders_E <- c('E', NTP_spiders_data$`E`$Neutral.wt, 
+                   quantile(SNM_spiders$boot.detail$block$'E'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_spiders$boot.detail$block$'E'$Neutral.wt, probs = 0.975))
+NTP_spiders_F <- c('F', NTP_spiders_data$`F`$Neutral.wt, 
+                   quantile(SNM_spiders$boot.detail$block$'F'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_spiders$boot.detail$block$'F'$Neutral.wt, probs = 0.975))
+NTP_spiders_LF1 <- c('LF2', NTP_spiders_data$`LF1`$Neutral.wt, 
+                     quantile(SNM_spiders$boot.detail$block$'LF1'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_spiders$boot.detail$block$'LF1'$Neutral.wt, probs = 0.975))
+NTP_spiders_LF2 <- c('LF2', NTP_spiders_data$`LF2`$Neutral.wt, 
+                     quantile(SNM_spiders$boot.detail$block$'LF2'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_spiders$boot.detail$block$'LF2'$Neutral.wt, probs = 0.975))
+NTP_spiders_OG2 <- c('OG2', NTP_spiders_data$`OG2`$Neutral.wt, 
+                     quantile(SNM_spiders$boot.detail$block$'OG2'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_spiders$boot.detail$block$'OG2'$Neutral.wt, probs = 0.975))
+NTP_spiders_OG3 <- c('OG3', NTP_spiders_data$`OG3`$Neutral.wt, 
+                     quantile(SNM_spiders$boot.detail$block$'OG3'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_spiders$boot.detail$block$'OG3'$Neutral.wt, probs = 0.975))
+
+NTP_spiders_summary <- as.data.frame(rbind(NTP_spiders_A, NTP_spiders_B, NTP_spiders_C, NTP_spiders_D,
+                                           NTP_spiders_E, NTP_spiders_F, NTP_spiders_LF1, NTP_spiders_LF2, 
+                                           NTP_spiders_OG2, NST_spiders_OG3))
+
+
+# Rename column and row headings
+colnames(NTP_spiders_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NTP_spiders_summary) = 1:10
+
+# Add mean ACD
+NTP_spiders_summary <- left_join(NTP_spiders_summary, ACD_spiders_summary, by = "block")
+
+str(NTP_spiders_summary)
+NTP_spiders_summary$mean <- as.numeric(NTP_spiders_summary$mean)
+NTP_spiders_summary$lower.95.quant <- as.numeric(NTP_spiders_summary$lower.95.quant)
+NTP_spiders_summary$upper.95.quant <- as.numeric(NTP_spiders_summary$upper.95.quant)
+
+NTP_spiders_summary$range <- NTP_spiders_summary$upper.95.quant - NTP_spiders_summary$lower.95.quant
+
+mean(NTP_spiders_summary$mean)
+
+write.csv(NTP_spiders_summary, file = "Results/NTP_spiders_summary.csv")
+
+##### iCAMP - inferring community assembly mechanisms by phylogenetic bin-based null model analysis #####
+
+# Phylogeny
+spiders_phylo <- safedata :: get_phylogeny(4139685)
+spiders_tips <-  intersect(spiders_phylo[["tip.labels"]], colnames(spiders_composition_matrix))
+spiders_phylo <- ape::keep.tip(spiders_phylo, spiders_tips)
+spiders_phylo$tip.labels <- NULL
+spiders_phylo$node.labels <- NULL
+
+# Root the tree
+spiders_phylo_rooted <- phytools::midpoint.root(spiders_phylo)
+spiders_phylo_rooted
+
+#  Phylogenetic distance matrix.
+save.wd = "iCAMP outputs/Spiders iCAMP outputs_repeat"
+
+# Phylogenetic distance matrix
+pd.spiders = pdist.big(tree = spiders_phylo_rooted, wd=save.wd, nworker = 8, memory.G = 500)
+
+# iCAMP
+iCAMP_spiders =iCAMP::icamp.big(comm=spiders_composition_matrix, pd.desc = pd.spiders$pd.file, pd.spname=pd.spiders$tip.label,
+                             pd.wd = save.wd, rand = 500, tree=spiders_phylo_rooted,
+                             prefix = 'spiders', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                             phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                             phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                             nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                             qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                             correct.special = TRUE, unit.sum = rowSums(spiders_composition_matrix), special.method = "depend",
+                             ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+
+iCAMP_spiders
+
+## Calculate mean of each process in each sampling block
+iCAMP_spiders_processes <- as.data.frame(iCAMP_spiders$detail$processes)
+colnames(iCAMP_spiders_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+colMeans(iCAMP_spiders_processes[,3:7])
+
+iCAMP_spiders_processes <- tidyr::separate(iCAMP_spiders_processes, sample2, into = c("block", "num")) 
+
+iCAMP_spiders_processes_summary <- as.data.frame(iCAMP_spiders_processes %>% group_by(block) %>% summarise(mean_HeS = mean(HeS),
+                                                                                                     mean_HoS = mean(HoS), 
+                                                                                                     mean_DL = mean(DL),
+                                                                                                     mean_HoD = mean(HoD),
+                                                                                                     mean_Dr = mean(Dr)))
+
+colMeans(iCAMP_spiders_processes_summary[,2:6])
+
+#Join with log ACD
+iCAMP_spiders_processes_summary <- left_join(iCAMP_spiders_processes_summary, ACD_spiders_summary, by = 'block')
+
+
+write.csv(iCAMP_spiders_processes_summary, file = "Results/iCAMP_spiders_processes_summary.csv")
+
+## Phylogenetic bins
+iCAMP_spiders$detail$taxabin$state.united$bin.united.tax.num # number of taxa in each bin
+iCAMP_spiders$detail$taxabin$sp.bin # shows which species are in each bin
+
+## Plot tree and show bins
+ggtree(spiders_phylo) +
+  geom_tiplab(size = 2.8) +
+  geom_nodelab(size = 3, nudge_x =-0.5, nudge_y = 1.2) +
+  geom_strip('SAL02', 'SAL47', barsize = 2, color = 'red', 
+             label = 'Bin 2', offset = 1.6, offset.text = 0.1) +
+  geom_strip('THD01', 'THD67', barsize = 2, color = 'chartreuse3', 
+             label = 'Bin 3', offset = 1.6, offset.text = 0.1) +
+  geom_strip('THO01', 'THO20', barsize = 2, color = 'purple', 
+             label = 'Bin 4', offset = 1.6, offset.text = 0.1) +
+  geom_strip('ARA01', 'ARA16', barsize = 2, color = 'orange2', 
+             label = 'Bin 5', offset = 1.6, offset.text = 0.1) +
+  geom_strip('PHO11', 'HAH01', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  xlim(0,5) +
+  ggtitle("Spiders") +
+  theme(plot.margin = unit(c(0.1,0.1,0.5,0.1), "cm"),
+        plot.title = element_text(size = 15))
+ggsave("SpidersTree.pdf", width = 15, height = 55, units = "cm")
+
+
+
+######################################################################################################
+############################################ Moths ###################################################
+######################################################################################################
+#### Moths ####
+# Moth abundance data collected by Sarah Maunsell et al https://zenodo.org/record/4247169#.Y9FU4nb7RD9
+# Load the moths data
+moths_composition_matrix <- load_safe_data(4247169, 'MothAssem')
+moths_composition_matrix <- subset(moths_composition_matrix, select = -c(Date, Type))
+
+# Set site names as rownames
+rownames(moths_composition_matrix) <- moths_composition_matrix$Location
+moths_composition_matrix <- subset(moths_composition_matrix, select = - Location)
+
+# Remove oil palm
+moths_composition_matrix <- moths_composition_matrix[ grep("OP", rownames(moths_composition_matrix), invert = TRUE) , ] # Remove oil palm plantations
+
+# Remove the word 'count' from the morphospecies names
+colnames(moths_composition_matrix) <- gsub("_count", "", colnames(moths_composition_matrix))
+
+# Remove taxa (columns) whose abundance is zero (maybe these are taxa that were only found in OP?)
+colSums(moths_composition_matrix)
+moths_composition_matrix <- moths_composition_matrix[, which(colSums(moths_composition_matrix) != 0)]
+colSums(moths_composition_matrix)
+
+sum(colSums(moths_composition_matrix)) # number of individuals
+ncol(moths_composition_matrix) # number of species
+nrow(moths_composition_matrix) # number of sites
+
+
+## ACD - above-ground carbon density data derived from LiDAR by Swinfield et al., 2014 https://doi.org/10.5281/zenodo.4020697 
+# Select only sites that are in moths_composition_matrix
+ACD_moths <- subset(ACD_all, ACD_all$ID %in% rownames(moths_composition_matrix))
+
+# Calculate mean ACD
+ACD_moths <- separate(ACD_moths, ID, into = c("block", "num"), remove = FALSE)
+ACD_moths <- as.data.frame(ACD_moths %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+
+# Create summarised table to be used for plotting and regression
+ACD_moths_summary <- as.data.frame(ACD_moths %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+# Just sampling block names to be used for analysis
+Sites_moths <- subset(ACD_moths, select = c(ID, block))
+rownames(Sites_moths) <- Sites_moths[, 1]
+Sites_moths <- subset(Sites_moths, select = block)
+
+##### NST - normalised stochasticity ratio #####
+NST_moths <- tNST(moths_composition_matrix, Sites_moths, dist.method = "ruzicka", output.rand = TRUE, RC = TRUE)
+mean(NST_moths$index.grp$NST.i.ruzicka)
+
+NST_moths_summary <- subset(NST_moths$index.grp,  select = c(group, NST.i.ruzicka))
+NST_moths_summary <- NST_moths_summary %>% split(NST_moths_summary$group) # Split so you can separately index each sampling block
+
+# Bootstrapping
+NST_moths_boot <- nst.boot(NST_moths, out.detail = TRUE, nworker = 2)
+
+# Taking the 95th quantiles of the bootstrapping list for each sampling block
+# The bootstrapping list is the results of each random draw
+NST_moths_boot$detail
+
+NST_moths_A <- c('A', NST_moths_summary$'A'$NST.i.ruzicka, 
+                   quantile(NST_moths_boot$detail$NST.boot$'A', probs = 0.025), 
+                   quantile(NST_moths_boot$detail$NST.boot$'A', probs = 0.975))
+
+NST_moths_B <- c('B', NST_moths_summary$'B'$NST.i.ruzicka, 
+                   quantile(NST_moths_boot$detail$NST.boot$'B', probs = 0.025), 
+                   quantile(NST_moths_boot$detail$NST.boot$'B', probs = 0.975))
+
+NST_moths_C <- c('C', NST_moths_summary$'C'$NST.i.ruzicka, 
+                   quantile(NST_moths_boot$detail$NST.boot$'C', probs = 0.025), 
+                   quantile(NST_moths_boot$detail$NST.boot$'C', probs = 0.975))
+
+NST_moths_D <- c('D', NST_moths_summary$'D'$NST.i.ruzicka, 
+                   quantile(NST_moths_boot$detail$NST.boot$'D', probs = 0.025), 
+                   quantile(NST_moths_boot$detail$NST.boot$'D', probs = 0.975))
+
+NST_moths_E <- c('E', NST_moths_summary$'E'$NST.i.ruzicka, 
+                   quantile(NST_moths_boot$detail$NST.boot$'E', probs = 0.025), 
+                   quantile(NST_moths_boot$detail$NST.boot$'E', probs = 0.975))
+
+NST_moths_F <- c('F', NST_moths_summary$'F'$NST.i.ruzicka, 
+                   quantile(NST_moths_boot$detail$NST.boot$'F', probs = 0.025), 
+                   quantile(NST_moths_boot$detail$NST.boot$'F', probs = 0.975))
+
+NST_moths_OG2 <- c('OG2', NST_moths_summary$'OG2'$NST.i.ruzicka, 
+                     quantile(NST_moths_boot$detail$NST.boot$'OG2', probs = 0.025), 
+                     quantile(NST_moths_boot$detail$NST.boot$'OG2', probs = 0.975))
+
+NST_moths_OG3 <- c('OG3', NST_moths_summary$'OG3'$NST.i.ruzicka, 
+                     quantile(NST_moths_boot$detail$NST.boot$'OG3', probs = 0.025), 
+                     quantile(NST_moths_boot$detail$NST.boot$'OG3', probs = 0.975))
+
+NST_moths_summary <- as.data.frame(rbind(NST_moths_A, NST_moths_B, NST_moths_C, NST_moths_D,
+                                           NST_moths_E, NST_moths_F, NST_moths_OG2, NST_moths_OG3))
+
+colnames(NST_moths_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NST_moths_summary) = 1:8
+
+NST_moths_summary$mean <- as.numeric(NST_moths_summary$mean)
+NST_moths_summary$lower.95.quant <- as.numeric(NST_moths_summary$lower.95.quant)
+NST_moths_summary$upper.95.quant <- as.numeric(NST_moths_summary$upper.95.quant)
+
+NST_moths_summary <- left_join(NST_moths_summary, ACD_moths_summary, by = "block")
+NST_moths_summary$range <- NST_moths_summary$upper.95.quant - NST_moths_summary$lower.95.quant
+NST_moths_summary
+
+mean(NST_moths_summary$mean)
+
+write.csv(NST_moths_summary, file = "Results/NST_moths_summary.csv")
+
+##### RC - Raup-Crick #####
+
+RC_moths <- NST_moths$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+names(RC_moths)[names(RC_moths) == "name2"] <- "block_num"
+RC_moths <- separate(RC_moths, block_num, into = c("block", "num"))
+RC_moths$RC.ruzicka <- as.numeric(RC_moths$RC.ruzicka)
+
+# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
+RC_moths$RC.ruzicka <- abs(RC_moths$RC.ruzicka)
+
+# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
+RC_moths <- RC_moths %>% mutate(one_minus_RC = 1 - RC.ruzicka)
+# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
+names(RC_moths)[names(RC_moths) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
+names(RC_moths)[names(RC_moths) == "one_minus_RC"] <- "RC.ruzicka"
+
+## Calculate 95% quantiles by bootstrapping
+RC_moths <- RC_moths %>% select('block', 'RC.ruzicka') # Just need RC and block name
+RC_moths <- RC_moths %>% split( RC_moths$block) # Split so you can separately index each sampling block
+
+## Calculate mean and bootstrapped CIs for each sampling block
+RC_moths_summary_A <- c('A', mean(RC_moths$A$RC.ruzicka), bootstrap(RC_moths$A$RC.ruzicka))
+RC_moths_summary_B <- c('B', mean(RC_moths$B$RC.ruzicka), bootstrap(RC_moths$B$RC.ruzicka))
+RC_moths_summary_C <- c('C', mean(RC_moths$C$RC.ruzicka), bootstrap(RC_moths$C$RC.ruzicka))
+RC_moths_summary_D <- c('D', mean(RC_moths$D$RC.ruzicka), bootstrap(RC_moths$D$RC.ruzicka))
+RC_moths_summary_E <- c('E', mean(RC_moths$E$RC.ruzicka), bootstrap(RC_moths$E$RC.ruzicka))
+RC_moths_summary_F <- c('F', mean(RC_moths$F$RC.ruzicka), bootstrap(RC_moths$F$RC.ruzicka))
+RC_moths_summary_OG2 <- c('OG2', mean(RC_moths$OG2$RC.ruzicka), bootstrap(RC_moths$OG2$RC.ruzicka))
+RC_moths_summary_OG3 <- c('OG3', mean(RC_moths$OG3$RC.ruzicka), bootstrap(RC_moths$OG3$RC.ruzicka))
+
+
+## Combine these all into a dataframe
+RC_moths_summary <- as.data.frame(rbind(RC_moths_summary_A, RC_moths_summary_B, RC_moths_summary_C, RC_moths_summary_D, 
+                                          RC_moths_summary_E, RC_moths_summary_F,  RC_moths_summary_OG2, RC_moths_summary_OG3))
+
+RC_moths_summary
+
+# Rename column and row headings
+colnames(RC_moths_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(RC_moths_summary) = 1:8
+# Add mean ACD
+RC_moths_summary <- left_join(RC_moths_summary, ACD_moths_summary, by = "block")
+
+RC_moths_summary$mean <- as.numeric(RC_moths_summary$mean)
+RC_moths_summary$lower.95.quant <- as.numeric(RC_moths_summary$lower.95.quant)
+RC_moths_summary$upper.95.quant <- as.numeric(RC_moths_summary$upper.95.quant)
+
+RC_moths_summary$range <- RC_moths_summary$upper.95.quant - RC_moths_summary$lower.95.quant
+RC_moths_summary
+mean(RC_moths_summary$mean)
+
+write.csv(RC_moths_summary, file = "Results/RC_moths_summary.csv")
+
+##### NTP - Neutral taxa percentage #####
+moths_composition_matrix <- as.data.frame(moths_composition_matrix)
+
+# Fit Sloan's neutral model
+SNM_moths <- snm.comm(comm = moths_composition_matrix, treat = Sites_moths)
+NTP_moths_data <- SNM_moths$ratio.summary  %>% filter(index == "mean")
+NTP_moths_data <- NTP_moths_data  %>% dplyr :: select(index, treatment.id, Neutral.wt)
+NTP_moths_data <- NTP_moths_data %>% split(NTP_moths_data$treatment.id)
+
+
+NTP_moths_A <- c('A', NTP_moths_data$`A`$Neutral.wt, 
+                   quantile(SNM_moths$boot.detail$block$'A'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_moths$boot.detail$block$'A'$Neutral.wt, probs = 0.975))
+NTP_moths_B <- c('B', NTP_moths_data$`B`$Neutral.wt, 
+                   quantile(SNM_moths$boot.detail$block$'B'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_moths$boot.detail$block$'B'$Neutral.wt, probs = 0.975))
+NTP_moths_C <- c('C', NTP_moths_data$`C`$Neutral.wt, 
+                   quantile(SNM_moths$boot.detail$block$'C'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_moths$boot.detail$block$'C'$Neutral.wt, probs = 0.975))
+NTP_moths_D <- c('D', NTP_moths_data$`D`$Neutral.wt, 
+                   quantile(SNM_moths$boot.detail$block$'D'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_moths$boot.detail$block$'D'$Neutral.wt, probs = 0.975))
+NTP_moths_E <- c('E', NTP_moths_data$`E`$Neutral.wt, 
+                   quantile(SNM_moths$boot.detail$block$'E'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_moths$boot.detail$block$'E'$Neutral.wt, probs = 0.975))
+NTP_moths_F <- c('F', NTP_moths_data$`F`$Neutral.wt, 
+                   quantile(SNM_moths$boot.detail$block$'F'$Neutral.wt, probs = 0.025), 
+                   quantile(SNM_moths$boot.detail$block$'F'$Neutral.wt, probs = 0.975))
+NTP_moths_OG2 <- c('OG2', NTP_moths_data$`OG2`$Neutral.wt, 
+                     quantile(SNM_moths$boot.detail$block$'OG2'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_moths$boot.detail$block$'OG2'$Neutral.wt, probs = 0.975))
+NTP_moths_OG3 <- c('OG3', NTP_moths_data$`OG3`$Neutral.wt, 
+                     quantile(SNM_moths$boot.detail$block$'OG3'$Neutral.wt, probs = 0.025), 
+                     quantile(SNM_moths$boot.detail$block$'OG3'$Neutral.wt, probs = 0.975))
+
+NTP_moths_summary <- as.data.frame(rbind(NTP_moths_A, NTP_moths_B, NTP_moths_C, NTP_moths_D,
+                                           NTP_moths_E, NTP_moths_F,  NTP_moths_OG2, NST_moths_OG3))
+# Rename column and row headings
+colnames(NTP_moths_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(NTP_moths_summary) = 1:8
+
+# Add mean ACD
+NTP_moths_summary <- left_join(NTP_moths_summary, ACD_moths_summary, by = "block")
+
+NTP_moths_summary$mean <- as.numeric(NTP_moths_summary$mean)
+NTP_moths_summary$lower.95.quant <- as.numeric(NTP_moths_summary$lower.95.quant)
+NTP_moths_summary$upper.95.quant <- as.numeric(NTP_moths_summary$upper.95.quant)
+
+NTP_moths_summary$range <- NTP_moths_summary$upper.95.quant - NTP_moths_summary$lower.95.quant
+
+mean(NTP_moths_summary$mean)
+
+write.csv(NTP_moths_summary, file = "Results/NTP_moths_summary.csv")
+
+
+
+#### iCAMP ####
+
+# get moths phylogeny
+# code from safedata::get_phylogeny()
+# https://rdrr.io/cran/safedata/src/R/taxa.R
+  
+record_set <- validate_record_ids(4247169)
+record_set
+
+# Get the record metadata containing the taxon index and if possible the
+# taxon worksheet, which provides the matching of taxon names to datasets
+taxa <- show_record(record_set)$taxa
+
+# drop the id field and any duplicates
+taxa <- taxa[, -match("id", names(taxa))]
+taxa <- unique(taxa)
+
+# Some datasets point more than one different "worksheet name" to the same
+# taxon. This is not ideal but was not expressly an error in early versions
+# of safedata_validator. Each duplicated row is a (hopefully) different
+# child of the shared taxon, so promoting the taxon to a parent retains
+# the expected tips.
+is_tip <- ! is.na(taxa$worksheet_name)
+dupe_tn <- duplicated(taxa$taxon_name[is_tip])
+
+# split the tree into tips (taxa used in the dataset and which have
+# worksheet names) and the rest of the tree that connects those tips
+tips <- taxa[is_tip, ]
+tree <- taxa[! is_tip, ]
+
+# remove duplications from the tips data frame
+dupes <- tips$taxon_name[which(dupe_tn)]
+dupes <- tips$taxon_name %in% dupes
+dupe_rows <- tips[dupes, ]
+tips <- tips[! dupes, ]
+
+# split the duplicates up into sets by the duplicated name and
+# then repackage the row into new tips and new tree rows
+dupe_rows <- split(dupe_rows, dupe_rows$taxon_name)
+
+for (this_dupe in dupe_rows) {
+  new_tips <- data.frame(worksheet_name = this_dupe$worksheet_name,
+                         gbif_id = -1,
+                         taxon_rank = "user",
+                         taxon_name = this_dupe$worksheet_name,
+                         gbif_status = "user",
+                         dataset_id = this_dupe$dataset_id,
+                         gbif_parent_id = this_dupe$gbif_id,
+                         stringsAsFactors = FALSE)
+  tips <- rbind(tips, new_tips)
+  
+  new_parent <- this_dupe[1, ]
+  new_parent$worksheet_name <- NA
+  tree <- rbind(tree, new_parent)
+}
+
+taxa <- rbind(tips, tree)
+
+dupes <- duplicated(taxa$taxon_name)
+
+dupe_names <- taxa$taxon_name[dupes]
+taxa$taxon_name <- ifelse(taxa$taxon_name %in% dupe_names,
+                          paste0(taxa$taxon_name, "_", taxa$gbif_id),
+                          taxa$taxon_name)
+
+# Add the parent name to the taxa to make edges, catching the root
+# edge and unknown parents above the kingdom level
+taxa$parent_name <- taxa$taxon_name[match(taxa$gbif_parent_id,
+                                          taxa$gbif_id)]
+taxa$parent_name[is.na(taxa$parent_name) &
+                   taxa$taxon_rank == "kingdom"] <- "root"
+
+still_missing <- is.na(taxa$parent_name)
+
+terminal_vertices <- list("root", "root", "root", NA, "accepted")
+
+edges <- taxa[, c("parent_name", "taxon_name")]
+vertices <- subset(taxa, select = c(taxon_name, taxon_rank, worksheet_name,
+                                    gbif_id, gbif_status))
+vertices <- rbind(vertices, terminal_vertices)
+
+#g <- igraph::graph_from_data_frame(edges, vertices = vertices) 
+#g <- igraph::set_vertex_attr(g, "leaf",
+                             #value = igraph::degree(g, mode = "out") == 0)
+
+# where are the duplicate vertex names?
+vertices$taxon_name[vertices$taxon_name %in% vertices$taxon_name[duplicated(vertices$taxon_name)] ]
+#  there are 3 duplicated names
+# "sp520_-1" "sp617_-1" "sp678_-1" "sp520_-1" "sp617_-1" "sp678_-1"
+
+# remove them
+vertices_unduplicated <- vertices %>% distinct(taxon_name, .keep_all = TRUE)
+vertices$taxon_name[duplicated(vertices$taxon_name)]
+vertices_unduplicated$taxon_name[duplicated(vertices_unduplicated$taxon_name)]
+str(vertices)
+str(vertices_unduplicated)
+
+## and do the same for duplicate edge names
+edges$taxon_name[edges$taxon_name %in% edges$taxon_name[duplicated(edges$taxon_name)] ] # identify duplicates 
+edges_unduplicated <- edges %>% distinct(taxon_name, .keep_all = TRUE) # remove duplicates
+
+# make the taxon graph again
+g <- igraph::graph_from_data_frame(edges_unduplicated, vertices = vertices_unduplicated) 
+g <- igraph::set_vertex_attr(g, "leaf",
+                             value = igraph::degree(g, mode = "out") == 0)
+# get phylogeny
+moths_phylo <- igraph_to_phylo(g)
+
+
+
+#### back to the iCAMP analysis
+
+moths_phylo # I used the source code for the safedata::get_taxon_graph and got rid of the duplicate vertex names (there were just 3 species with duplicate vertex names)
+
+# need to change the comp mat colnames to the taxon_name so it matches the phylo
+moths_composition_matrix_orig<- load_safe_data(4247169, 'MothAssem')
+moths_taxa<- get_taxa(moths_composition_matrix_orig)
+colnames(moths_composition_matrix) = moths_taxa$taxon_name[match(colnames(moths_composition_matrix), rownames(moths_taxa))]
+moths_tips <-  intersect(moths_phylo[["tip.labels"]], colnames(moths_composition_matrix))
+moths_phylo <- ape::keep.tip(moths_phylo, moths_tips)
+moths_phylo$tip.labels <- NULL
+moths_phylo$node.labels <- NULL
+
+# Root the tree
+moths_phylo_rooted <- midpoint.root(moths_phylo)
+moths_phylo_rooted
+
+
+#  Phylogenetic distance matrix.
+save.wd = "iCAMP outputs/Moths iCAMP outputs"
+pd.moths = pdist.big(tree = moths_phylo_rooted, wd=save.wd, nworker = 8, memory.G = 500)
+
+# iCAMP
+iCAMP_moths =iCAMP::icamp.big(comm=moths_composition_matrix, pd.desc = pd.moths$pd.file, pd.spname=pd.moths$tip.label,
+                                pd.wd = save.wd, rand = 500, tree=moths_phylo_rooted,
+                                prefix = 'moths', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                                phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                                phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                                nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                                qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                                correct.special = TRUE, unit.sum = rowSums(moths_composition_matrix), special.method = "depend",
+                                ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+
+iCAMP_moths
+
+## Calculate mean of each process in each sampling block
+iCAMP_moths_processes <- as.data.frame(iCAMP_moths$detail$processes)
+
+colnames(iCAMP_moths_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+colMeans(iCAMP_moths_processes[,3:7])
+
+iCAMP_moths_processes <- tidyr::separate(iCAMP_moths_processes, sample2, into = c("block", "num")) 
+
+iCAMP_moths_processes_summary <- as.data.frame(iCAMP_moths_processes %>% group_by(block) %>% summarise(mean_HeS = mean(HeS),
+                                                                                                           mean_HoS = mean(HoS), 
+                                                                                                           mean_DL = mean(DL),
+                                                                                                           mean_HoD = mean(HoD),
+                                                                                                           mean_Dr = mean(Dr)))
+colMeans(iCAMP_moths_processes_summary[,2:6])
+
+#Join with log ACD
+iCAMP_moths_processes_summary <- left_join(iCAMP_moths_processes_summary, ACD_moths_summary, by = 'block')
+
+write.csv(iCAMP_moths_processes_summary, file = "Results/iCAMP_moths_processes_summary.csv")
+
+
+## Phylogenetic bins
+iCAMP_moths$detail$taxabin$state.united$bin.united.tax.num # number of taxa in each bin
+iCAMP_moths$detail$taxabin$sp.bin # shows which species are in each bin
+
+## Plot tree and show bins
+ggtree(moths_phylo) +
+  geom_tiplab(size = 2.6) +
+  geom_nodelab(size = 3, nudge_x =-0.5, nudge_y = 1.2) +
+  geom_strip('sp22', 'Albara reversaria', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Barsine rubricostata', 'Cyana costifimbria', barsize = 2, color = 'blue', 
+             label = 'Bin 1', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Sabanissa', 'Ugia eugrapha', barsize = 2, color = 'red', 
+             label = 'Bin 2', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Aemene', 'Nyctemera adversata', barsize = 2, color = 'chartreuse3', 
+             label = 'Bin 3', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Ourapteryx', 'Hyposidra talaca', barsize = 2, color = 'purple', 
+             label = 'Bin 4', offset = 1.6, offset.text = 0.1) +
+  geom_strip('Euthrix', 'Trabala ganesha', barsize = 2, color = 'orange2', 
+             label = 'Bin 5', offset = 1.6, offset.text = 0.1) +
+  xlim(0,5) +
+  ggtitle("Moths") +
+  theme(plot.margin = unit(c(0.1,0.1,0.5,0.1), "cm"),
+        plot.title = element_text(size = 15))
+ggsave("MothsTree.pdf", width = 30, height = 125, units = "cm")
+
+
 
 
