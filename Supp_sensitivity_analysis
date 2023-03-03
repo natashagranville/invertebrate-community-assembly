@@ -1,0 +1,246 @@
+
+#### Spiders grouping all sites in same block ----------------
+
+library(safedata)
+set_safe_dir('my_safe_directory')
+getOption('safedata.dir')
+
+spiders_composition_matrix <- load_safe_data(4139685, 'SpiderAssem')
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = -c(Date, Type))
+rownames(spiders_composition_matrix) <- spiders_composition_matrix$Location
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = - Location)
+spiders_composition_matrix <- spiders_composition_matrix[ grep("OP", rownames(spiders_composition_matrix), invert = TRUE) , ] # Remove oil palm plantations
+colnames(spiders_composition_matrix) <- gsub("_count", "", colnames(spiders_composition_matrix))
+spiders_composition_matrix <- spiders_composition_matrix[, which(colSums(spiders_composition_matrix) != 0)]
+
+# Remove taxa that are not in the phylogeny for spiders, therefore also not in the iCAMP analysis
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = -c(GNA01, HER01, PIS01, TEB01, SCY01, THS01))
+
+# Select only sites that are in spiders_composition_matrix
+ACD_spiders <- subset(ACD_all, ACD_all$ID %in% rownames(spiders_composition_matrix))
+
+View(spiders_composition_matrix)
+
+# Lump sites together
+A <- colSums(spiders_composition_matrix[1:4, ])
+B <- colSums(spiders_composition_matrix[5:8, ])
+C <- colSums(spiders_composition_matrix[9:12, ])
+D <- colSums(spiders_composition_matrix[13:16, ])
+E <- colSums(spiders_composition_matrix[17:20, ])
+F <- colSums(spiders_composition_matrix[21:24, ])
+LF1 <- colSums(spiders_composition_matrix[25:28, ])
+LF2 <- colSums(spiders_composition_matrix[29:32, ])
+OG2 <- colSums(spiders_composition_matrix[33:36, ])
+OG3 <- colSums(spiders_composition_matrix[37:40, ])
+
+
+spiders_comp_mat_grouped <- rbind(A, B, C, D, E, F, LF1, LF2, OG2, OG3)
+
+View(spiders_comp_mat_grouped)
+
+# Phylogeny 
+library(safedata)
+spiders_phylo <- safedata :: get_phylogeny(4139685)
+spiders_tips <-  intersect(spiders_phylo[["tip.labels"]], colnames(spiders_comp_mat_grouped))
+spiders_phylo <- ape::keep.tip(spiders_phylo, spiders_tips)
+spiders_phylo$tip.labels <- NULL
+spiders_phylo$node.labels <- NULL
+ape::plot.phylo(spiders_phylo)
+
+# Root the tree
+spiders_phylo_rooted <- phytools :: midpoint.root(spiders_phylo)
+
+
+# Phylogenetic distance matrix
+library(iCAMP)
+pd.spiders = pdist.big(tree = spiders_phylo_rooted, wd=getwd(), nworker = 8, memory.G = 500)
+
+# iCAMP
+iCAMP_spiders =iCAMP::icamp.big(comm=spiders_comp_mat_grouped, pd.desc = pd.spiders$pd.file, pd.spname=pd.spiders$tip.label,
+                                pd.wd = save.wd, rand = 500, tree=spiders_phylo_rooted,
+                                prefix = 'spiders', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                                phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                                phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                                nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                                qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                                correct.special = TRUE, unit.sum = rowSums(spiders_comp_mat_grouped), special.method = "depend",
+                                ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+iCAMP_spiders 
+
+iCAMP_spiders_processes <- as.data.frame(iCAMP_spiders$detail$processes)
+
+# Calculate mean of each process in each sampling block 
+colnames(iCAMP_spiders_processes)
+colnames(iCAMP_spiders_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+colMeans(iCAMP_spiders_processes[,3:7])
+
+
+### Calculate 95 % quantiles around the means
+set.seed(5)
+bootstrap <- function(data){ # Data is one sampling block 
+  for (i in 1:1000) {
+    boot_sample <-sample(data, replace = TRUE)
+    boot_lci <- quantile(boot_sample, probs = 0.025)
+    boot_uci <- quantile(boot_sample, probs = 0.975)
+    return(c(boot_lci, boot_uci))
+    
+  }
+}
+
+mean(iCAMP_spiders_processes$Dr)
+bootstrap(iCAMP_spiders_processes$Dr)
+
+mean(iCAMP_spiders_processes$HoS)
+bootstrap(iCAMP_spiders_processes$HoS)
+
+
+#### Orthoptera grouping all sites in same block -----------
+
+orthoptera_composition_matrix <- load_safe_data(7011354, 'OrthopteraAssem')
+orthoptera_composition_matrix <- subset(orthoptera_composition_matrix, select = -c( Date1, Date2, Type, Collector)) 
+rownames(orthoptera_composition_matrix) <- orthoptera_composition_matrix[, 1] 
+orthoptera_composition_matrix <- orthoptera_composition_matrix[, -1] 
+orthoptera_composition_matrix <- orthoptera_composition_matrix[ grep("OP", rownames(orthoptera_composition_matrix), invert = TRUE) , ]
+orthoptera_composition_matrix <- orthoptera_composition_matrix[, which(colSums(orthoptera_composition_matrix) != 0)]
+colnames(orthoptera_composition_matrix) <- gsub("_count", "", colnames(orthoptera_composition_matrix))
+View(orthoptera_composition_matrix)
+
+# Lump sites together
+B <- colSums(orthoptera_composition_matrix[1:6, ])
+C <- colSums(orthoptera_composition_matrix[7:12, ])
+D <- colSums(orthoptera_composition_matrix[13:18, ])
+F <- colSums(orthoptera_composition_matrix[19:24, ])
+OG2 <- colSums(orthoptera_composition_matrix[25:30, ])
+OG3 <- colSums(orthoptera_composition_matrix[31:36, ])
+
+orthop_comp_mat_grouped <- rbind(B, C, D, F, OG2, OG3)
+
+View(orthop_comp_mat_grouped)
+
+
+# Phylogeny 
+orthoptera_phylo <- safedata :: get_phylogeny(7011354)
+orthoptera_tips <-  intersect(orthoptera_phylo[["tip.labels"]], colnames(orthop_comp_mat_grouped))
+orthoptera_phylo <- ape::keep.tip(orthoptera_phylo, orthoptera_tips)
+orthoptera_phylo$tip.labels <- NULL
+orthoptera_phylo$node.labels <- NULL
+ape::plot.phylo(orthoptera_phylo)
+
+setdiff(orthoptera_phylo[["tip.label"]], colnames(orthop_comp_mat_grouped))
+
+# Root the tree
+orthoptera_phylo_rooted <- phytools :: midpoint.root(orthoptera_phylo)
+
+# Phylogenetic distance matrix
+pd.orthoptera = pdist.big(tree = orthoptera_phylo_rooted, wd=getwd(), nworker = 8, memory.G = 500)
+
+# iCAMP
+iCAMP_orthoptera =iCAMP::icamp.big(comm=orthop_comp_mat_grouped, pd.desc = pd.orthoptera$pd.file, pd.spname=pd.orthoptera$tip.label,
+                                   pd.wd = save.wd, rand = 500, tree=orthoptera_phylo_rooted,
+                                   prefix = 'Orthoptera', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                                   phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                                   phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                                   nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                                   qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                                   correct.special = TRUE, unit.sum = rowSums(orthop_comp_mat_grouped ), special.method = "depend",
+                                   ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+iCAMP_orthoptera 
+
+iCAMP_orthoptera_processes <- as.data.frame(iCAMP_orthoptera$detail$processes)
+
+# Calculate mean of each process in each sampling block 
+colnames(iCAMP_orthoptera_processes)
+colnames(iCAMP_orthoptera_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+iCAMP_orthoptera_processes
+
+colMeans(iCAMP_orthoptera_processes[,3:7]
+
+mean(iCAMP_orthoptera_processes$HeS)
+bootstrap(iCAMP_orthoptera_processes$HeS)
+
+mean(iCAMP_orthoptera_processes$Dr)
+bootstrap(iCAMP_orthoptera_processes$Dr)
+
+
+#### Moths grouping all sites in same block -----------
+
+moths_composition_matrix <- load_safe_data(4247169, 'MothAssem')
+moths_composition_matrix <- subset(moths_composition_matrix, select = -c(Date, Type))
+rownames(moths_composition_matrix) <- moths_composition_matrix$Location
+moths_composition_matrix <- subset(moths_composition_matrix, select = - Location)
+moths_composition_matrix <- moths_composition_matrix[ grep("OP", rownames(moths_composition_matrix), invert = TRUE) , ] # Remove oil palm plantations
+colnames(moths_composition_matrix) <- gsub("_count", "", colnames(moths_composition_matrix))
+moths_composition_matrix <- moths_composition_matrix[, which(colSums(moths_composition_matrix) != 0)]
+
+
+# Lump sites together
+A <- colSums(moths_composition_matrix[1:6, ])
+B <- colSums(moths_composition_matrix[7:12, ])
+C <- colSums(moths_composition_matrix[13:18, ])
+D <- colSums(moths_composition_matrix[19:24, ])
+E <- colSums(moths_composition_matrix[25:30, ])
+F <- colSums(moths_composition_matrix[31:36, ])
+OG2 <- colSums(moths_composition_matrix[37:40, ])
+OG3 <- colSums(moths_composition_matrix[41:46, ])
+
+orthop_comp_mat_grouped <- rbind(A, B, C, D, E, F, OG2, OG3)
+
+View(orthop_comp_mat_grouped)
+
+
+# Phylogeny 
+
+#### iCAMP ####
+moths_phylo # see script called get moths phylogeny in main analysis for how to do this
+# Need to get rid of the duplicate vertex names (there were just 3 species with duplicate vertex names)
+
+
+# need to change the comp mat colnames to the taxon_name so it matches the phylo
+moths_composition_matrix_orig<- load_safe_data(4247169, 'MothAssem')
+moths_taxa<- get_taxa(moths_composition_matrix_orig)
+colnames(moths_composition_matrix) = moths_taxa$taxon_name[match(colnames(moths_composition_matrix), rownames(moths_taxa))]
+moths_tips <-  intersect(moths_phylo[["tip.labels"]], colnames(moths_composition_matrix))
+moths_phylo <- ape::keep.tip(moths_phylo, moths_tips)
+moths_phylo$tip.labels <- NULL
+moths_phylo$node.labels <- NULL
+
+
+# Root the tree
+library(phytools)
+moths_phylo_rooted <- midpoint.root(moths_phylo)
+moths_phylo_rooted
+
+#  Phylogenetic distance matrix.
+pd.moths = pdist.big(tree = moths_phylo_rooted, wd=save.wd, nworker = 8, memory.G = 500)
+
+# iCAMP
+iCAMP_moths =iCAMP::icamp.big(comm=moths_composition_matrix, pd.desc = pd.moths$pd.file, pd.spname=pd.moths$tip.label,
+                              pd.wd = save.wd, rand = 500, tree=moths_phylo_rooted,
+                              prefix = 'moths', ds = 0.2, pd.cut = NA, sp.check = TRUE,
+                              phylo.rand.scale = "within.bin", taxa.rand.scale = "across.all",
+                              phylo.metric = "bMPD", sig.index="Confidence", bin.size.limit = 9, 
+                              nworker = 8, memory.G = 500, rtree.save = FALSE, detail.save = TRUE, 
+                              qp.save = FALSE, detail.null = FALSE, ignore.zero = TRUE, output.wd = getwd(), 
+                              correct.special = TRUE, unit.sum = rowSums(moths_composition_matrix), special.method = "depend",
+                              ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
+
+iCAMP_moths
+
+iCAMP_moths_processes <- as.data.frame(iCAMP_moths$detail$processes)
+
+# Calculate mean of each process in each sampling block 
+colnames(iCAMP_moths_processes)
+colnames(iCAMP_moths_processes) <- c('sample1', 'sample2', 'HeS', 'HoS', 'DL', 'HoD', 'Dr')
+
+iCAMP_moths_processes
+
+colMeans(iCAMP_moths_processes[,3:7])
+
+
+mean(iCAMP_moths_processes$Dr)
+bootstrap(iCAMP_moths_processes$Dr) 
+
+mean(iCAMP_moths_processes$DL) 
+bootstrap(iCAMP_moths_processes$DL)
