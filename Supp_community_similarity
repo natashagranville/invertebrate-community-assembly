@@ -1,0 +1,681 @@
+
+
+#### Ants ####
+library(vegan)
+ants_dist_matrix <- vegdist(ants_composition_matrix, method = 'bray')
+ants_dist_matrix <- as.matrix(ants_dist_matrix)
+ants_dist_matrix_A <- ants_dist_matrix[ - grep("A", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_B <- ants_dist_matrix[ - grep("B", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_C <- ants_dist_matrix[ - grep("C", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_D <- ants_dist_matrix[ - grep("D", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_E <- ants_dist_matrix[  grep(c("A|B|C|D|F|LFE|LF2|LF3|VJR|OG"), rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_F <- ants_dist_matrix[ - grep("F_", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_LFE <- ants_dist_matrix[ - grep("LFE", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_LF2 <- ants_dist_matrix[ - grep("LF2", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_LF3 <- ants_dist_matrix[ - grep("LF3", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_VJR <- ants_dist_matrix[ - grep("VJR", rownames(ants_dist_matrix), invert = TRUE) , ] 
+ants_dist_matrix_OG <- ants_dist_matrix[ - grep("OG", rownames(ants_dist_matrix), invert = TRUE) , ] 
+
+
+ants_dist_matrix_A_OG <- as.data.frame(ants_dist_matrix_A) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_A_OG <- as.matrix(ants_dist_matrix_A_OG )
+mean(rowMeans(ants_dist_matrix_A_OG ))
+mean(colMeans(ants_dist_matrix_A_OG )) # 0.94
+
+ants_dist_matrix_B_OG <- as.data.frame(ants_dist_matrix_B) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_B_OG <- as.matrix(ants_dist_matrix_B_OG )
+mean(rowMeans(ants_dist_matrix_B_OG ))
+mean(colMeans(ants_dist_matrix_B_OG )) # 0.94
+
+ants_dist_matrix_C_OG <- as.data.frame(ants_dist_matrix_C) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_C_OG <- as.matrix(ants_dist_matrix_C_OG )
+mean(rowMeans(ants_dist_matrix_C_OG ))
+mean(colMeans(ants_dist_matrix_C_OG )) # 0.96
+
+ants_dist_matrix_D_OG <- as.data.frame(ants_dist_matrix_D) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_D_OG <- as.matrix(ants_dist_matrix_D_OG )
+mean(rowMeans(ants_dist_matrix_D_OG ))
+mean(colMeans(ants_dist_matrix_D_OG )) # 0.98
+
+ants_dist_matrix_E_OG <- as.data.frame(ants_dist_matrix_E) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_E_OG <- as.matrix(ants_dist_matrix_F_OG )
+mean(rowMeans(ants_dist_matrix_E_OG ))
+mean(colMeans(ants_dist_matrix_E_OG )) # 0.97
+
+ants_dist_matrix_F_OG <- as.data.frame(ants_dist_matrix_F) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_F_OG <- as.matrix(ants_dist_matrix_F_OG )
+mean(rowMeans(ants_dist_matrix_F_OG ))
+mean(colMeans(ants_dist_matrix_F_OG )) # 0.97
+
+ants_dist_matrix_LFE_OG <- as.data.frame(ants_dist_matrix_LFE) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_LFE_OG <- as.matrix(ants_dist_matrix_LFE_OG )
+mean(rowMeans(ants_dist_matrix_LFE_OG ))
+mean(colMeans(ants_dist_matrix_LFE_OG )) # 0.94
+
+ants_dist_matrix_LF2_OG <- as.data.frame(ants_dist_matrix_LF2) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_LF2_OG <- as.matrix(ants_dist_matrix_LF2_OG )
+mean(rowMeans(ants_dist_matrix_LF2_OG ))
+mean(colMeans(ants_dist_matrix_LF2_OG )) # 0.92
+
+ants_dist_matrix_LF3_OG <- as.data.frame(ants_dist_matrix_LF3) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_LF3_OG <- as.matrix(ants_dist_matrix_LF3_OG )
+mean(rowMeans(ants_dist_matrix_LF3_OG ))
+mean(colMeans(ants_dist_matrix_LF3_OG )) # 0.95
+
+ants_dist_matrix_VJR_OG <- as.data.frame(ants_dist_matrix_VJR) %>%  select_if(grepl("OG", names(.)))
+ants_dist_matrix_VJR_OG <- as.matrix(ants_dist_matrix_VJR_OG )
+mean(rowMeans(ants_dist_matrix_VJR_OG ))
+mean(colMeans(ants_dist_matrix_VJR_OG )) # 0.98
+
+ants_BC_OG <- data.frame(block = c('A', 'B', 'C', 'D', 'E', 'F','LFE' ,'LF2', 'LF3', 'VJR'),
+                         BC_OG = c(mean(colMeans(ants_dist_matrix_A_OG )),
+                                   mean(colMeans(ants_dist_matrix_B_OG )),
+                                   mean(colMeans(ants_dist_matrix_C_OG )),
+                                   mean(colMeans(ants_dist_matrix_D_OG )),
+                                   mean(colMeans(ants_dist_matrix_E_OG )),
+                                   mean(colMeans(ants_dist_matrix_F_OG )),
+                                   mean(colMeans(ants_dist_matrix_LFE_OG )),
+                                   mean(colMeans(ants_dist_matrix_LF2_OG )),
+                                   mean(colMeans(ants_dist_matrix_LF3_OG )),
+                                   mean(colMeans(ants_dist_matrix_VJR_OG ))),
+                         Taxa = 'Ants')
+ants_BC_OG
+
+# BC_OG is Bray-Curtis compared to OG. Initally it shows Bray-Curtis dissimilarity, but changing it to 1-dissimilarity, which is Bray-Curtis similarity. 
+ants_BC_OG$BC_OG <- 1 - ants_BC_OG$BC_OG
+
+ants_BC_OG <- left_join(ants_BC_OG, ACD_ants_summary, by = 'block')
+
+
+#### Moths ####
+
+library(vegan)
+moths_dist_matrix <- vegdist(moths_composition_matrix, method = 'bray')
+moths_dist_matrix
+
+moths_dist_matrix <- as.matrix(moths_dist_matrix)
+moths_dist_matrix_A <- moths_dist_matrix[ - grep("A", rownames(moths_dist_matrix), invert = TRUE) , ] 
+moths_dist_matrix_B <- moths_dist_matrix[ - grep("B", rownames(moths_dist_matrix), invert = TRUE) , ] 
+moths_dist_matrix_C <- moths_dist_matrix[ - grep("C", rownames(moths_dist_matrix), invert = TRUE) , ] 
+moths_dist_matrix_D <- moths_dist_matrix[ - grep("D", rownames(moths_dist_matrix), invert = TRUE) , ] 
+moths_dist_matrix_E <- moths_dist_matrix[  grep(c("A|B|C|D|F|LFE|LF2|LF3|VJR|OG"), rownames(moths_dist_matrix), invert = TRUE) , ] 
+moths_dist_matrix_F <- moths_dist_matrix[ - grep("F_", rownames(moths_dist_matrix), invert = TRUE) , ] 
+moths_dist_matrix_OG <- moths_dist_matrix[ - grep("OG", rownames(moths_dist_matrix), invert = TRUE) , ] 
+
+moths_dist_matrix_A_OG <- as.data.frame(moths_dist_matrix_A) %>%  select_if(grepl("OG", names(.)))
+moths_dist_matrix_A_OG <- as.matrix(moths_dist_matrix_A_OG )
+mean(rowMeans(moths_dist_matrix_A_OG ))
+mean(colMeans(moths_dist_matrix_A_OG )) # 0.94
+
+moths_dist_matrix_B_OG <- as.data.frame(moths_dist_matrix_B) %>%  select_if(grepl("OG", names(.)))
+moths_dist_matrix_B_OG <- as.matrix(moths_dist_matrix_B_OG )
+mean(rowMeans(moths_dist_matrix_B_OG ))
+mean(colMeans(moths_dist_matrix_B_OG )) # 0.94
+
+moths_dist_matrix_C_OG <- as.data.frame(moths_dist_matrix_C) %>%  select_if(grepl("OG", names(.)))
+moths_dist_matrix_C_OG <- as.matrix(moths_dist_matrix_C_OG )
+mean(rowMeans(moths_dist_matrix_C_OG ))
+mean(colMeans(moths_dist_matrix_C_OG )) # 0.96
+
+moths_dist_matrix_D_OG <- as.data.frame(moths_dist_matrix_D) %>%  select_if(grepl("OG", names(.)))
+moths_dist_matrix_D_OG <- as.matrix(moths_dist_matrix_D_OG )
+mean(rowMeans(moths_dist_matrix_D_OG ))
+mean(colMeans(moths_dist_matrix_D_OG )) # 0.98
+
+moths_dist_matrix_E_OG <- as.data.frame(moths_dist_matrix_E) %>%  select_if(grepl("OG", names(.)))
+moths_dist_matrix_E_OG <- as.matrix(moths_dist_matrix_F_OG )
+mean(rowMeans(moths_dist_matrix_E_OG ))
+mean(colMeans(moths_dist_matrix_E_OG )) # 0.97
+
+moths_dist_matrix_F_OG <- as.data.frame(moths_dist_matrix_F) %>%  select_if(grepl("OG", names(.)))
+moths_dist_matrix_F_OG <- as.matrix(moths_dist_matrix_F_OG )
+mean(rowMeans(moths_dist_matrix_F_OG ))
+mean(colMeans(moths_dist_matrix_F_OG )) # 0.97
+
+moths_BC_OG <- data.frame(block = c('A', 'B', 'C', 'D', 'E', 'F'),
+                         BC_OG = c(mean(colMeans(moths_dist_matrix_A_OG )),
+                                   mean(colMeans(moths_dist_matrix_B_OG )),
+                                   mean(colMeans(moths_dist_matrix_C_OG )),
+                                   mean(colMeans(moths_dist_matrix_D_OG )),
+                                   mean(colMeans(moths_dist_matrix_E_OG )),
+                                   mean(colMeans(moths_dist_matrix_F_OG ))),
+                         Taxa = 'moths')
+moths_BC_OG
+
+# BC_OG is Bray-Curtis compared to OG. Initally it shows Bray-Curtis dissimilarity, but changing it to 1-dissimilarity, which is Bray-Curtis similarity. 
+moths_BC_OG$BC_OG <- 1 - moths_BC_OG$BC_OG
+
+moths_BC_OG <- left_join(moths_BC_OG, ACD_moths_summary, by = 'block')
+
+
+
+#### Orthoptera ####
+
+library(vegan)
+orthoptera_dist_matrix <- vegdist(orthoptera_composition_matrix, method = 'bray')
+
+orthoptera_dist_matrix
+
+orthoptera_dist_matrix <- as.matrix(orthoptera_dist_matrix)
+orthoptera_dist_matrix_B <- orthoptera_dist_matrix[ - grep("B", rownames(orthoptera_dist_matrix), invert = TRUE) , ] 
+orthoptera_dist_matrix_C <- orthoptera_dist_matrix[ - grep("C", rownames(orthoptera_dist_matrix), invert = TRUE) , ] 
+orthoptera_dist_matrix_D <- orthoptera_dist_matrix[ - grep("D", rownames(orthoptera_dist_matrix), invert = TRUE) , ] 
+orthoptera_dist_matrix_F <- orthoptera_dist_matrix[ - grep("F_", rownames(orthoptera_dist_matrix), invert = TRUE) , ] 
+orthoptera_dist_matrix_OG <- orthoptera_dist_matrix[ - grep("OG", rownames(orthoptera_dist_matrix), invert = TRUE) , ] 
+
+orthoptera_dist_matrix_B_OG <- as.data.frame(orthoptera_dist_matrix_B) %>%  select_if(grepl("OG", names(.)))
+orthoptera_dist_matrix_B_OG <- as.matrix(orthoptera_dist_matrix_B_OG )
+mean(rowMeans(orthoptera_dist_matrix_B_OG ))
+mean(colMeans(orthoptera_dist_matrix_B_OG )) 
+
+orthoptera_dist_matrix_C_OG <- as.data.frame(orthoptera_dist_matrix_C) %>%  select_if(grepl("OG", names(.)))
+orthoptera_dist_matrix_C_OG <- as.matrix(orthoptera_dist_matrix_C_OG )
+mean(rowMeans(orthoptera_dist_matrix_C_OG ))
+mean(colMeans(orthoptera_dist_matrix_C_OG )) 
+
+orthoptera_dist_matrix_D_OG <- as.data.frame(orthoptera_dist_matrix_D) %>%  select_if(grepl("OG", names(.)))
+orthoptera_dist_matrix_D_OG <- as.matrix(orthoptera_dist_matrix_D_OG )
+mean(rowMeans(orthoptera_dist_matrix_D_OG ))
+mean(colMeans(orthoptera_dist_matrix_D_OG )) 
+
+orthoptera_dist_matrix_F_OG <- as.data.frame(orthoptera_dist_matrix_F) %>%  select_if(grepl("OG", names(.)))
+orthoptera_dist_matrix_F_OG <- as.matrix(orthoptera_dist_matrix_F_OG )
+mean(rowMeans(orthoptera_dist_matrix_F_OG ))
+mean(colMeans(orthoptera_dist_matrix_F_OG )) 
+
+orthoptera_BC_OG <- data.frame(block = c( 'B', 'C', 'D', 'F'),
+                         BC_OG = c(mean(colMeans(orthoptera_dist_matrix_B_OG )),
+                                   mean(colMeans(orthoptera_dist_matrix_C_OG )),
+                                   mean(colMeans(orthoptera_dist_matrix_D_OG )),
+                                   mean(colMeans(orthoptera_dist_matrix_F_OG ))),
+                                   Taxa = 'orthoptera')
+orthoptera_BC_OG
+
+# BC_OG is Bray-Curtis compared to OG. Initally it shows Bray-Curtis dissimilarity, but changing it to 1-dissimilarity, which is Bray-Curtis similarity. 
+orthoptera_BC_OG$BC_OG <- 1 - orthoptera_BC_OG$BC_OG 
+
+orthoptera_BC_OG <- left_join(orthoptera_BC_OG, ACD_orthoptera_summary, by = 'block')
+
+
+#### Rove beetles ####
+
+library(vegan)
+rove_beetles_dist_matrix <- vegdist(rove_beetles_composition_matrix, method = 'bray')
+rove_beetles_dist_matrix
+
+rove_beetles_dist_matrix <- as.matrix(rove_beetles_dist_matrix)
+rove_beetles_dist_matrix_A <- rove_beetles_dist_matrix[ - grep("A", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_B <- rove_beetles_dist_matrix[ - grep("B", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_C <- rove_beetles_dist_matrix[ - grep("C", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_D <- rove_beetles_dist_matrix[ - grep("D", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_E <- rove_beetles_dist_matrix[  grep(c("A|B|C|D|F|LFE|LF1|LF2|LF3|VJR|OG"), rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_F <- rove_beetles_dist_matrix[ - grep("F_", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_LFE <- rove_beetles_dist_matrix[ - grep("LFE", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_LF1 <- rove_beetles_dist_matrix[ - grep("LF1", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_LF2 <- rove_beetles_dist_matrix[ - grep("LF2", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_LF3 <- rove_beetles_dist_matrix[ - grep("LF3", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+rove_beetles_dist_matrix_VJR <- rove_beetles_dist_matrix[ - grep("VJR", rownames(rove_beetles_dist_matrix), invert = TRUE) , ]
+rove_beetles_dist_matrix_OG <- rove_beetles_dist_matrix[ - grep("OG", rownames(rove_beetles_dist_matrix), invert = TRUE) , ] 
+
+rove_beetles_dist_matrix_A_OG <- as.data.frame(rove_beetles_dist_matrix_A) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_A_OG <- as.matrix(rove_beetles_dist_matrix_A_OG )
+mean(rowMeans(rove_beetles_dist_matrix_A_OG ))
+mean(colMeans(rove_beetles_dist_matrix_A_OG )) 
+
+rove_beetles_dist_matrix_B_OG <- as.data.frame(rove_beetles_dist_matrix_B) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_B_OG <- as.matrix(rove_beetles_dist_matrix_B_OG )
+mean(rowMeans(rove_beetles_dist_matrix_B_OG ))
+mean(colMeans(rove_beetles_dist_matrix_B_OG ))
+
+rove_beetles_dist_matrix_C_OG <- as.data.frame(rove_beetles_dist_matrix_C) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_C_OG <- as.matrix(rove_beetles_dist_matrix_C_OG )
+mean(rowMeans(rove_beetles_dist_matrix_C_OG ))
+mean(colMeans(rove_beetles_dist_matrix_C_OG )) 
+
+rove_beetles_dist_matrix_D_OG <- as.data.frame(rove_beetles_dist_matrix_D) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_D_OG <- as.matrix(rove_beetles_dist_matrix_D_OG )
+mean(rowMeans(rove_beetles_dist_matrix_D_OG ))
+mean(colMeans(rove_beetles_dist_matrix_D_OG )) 
+
+rove_beetles_dist_matrix_E_OG <- as.data.frame(rove_beetles_dist_matrix_E) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_E_OG <- as.matrix(rove_beetles_dist_matrix_E_OG )
+mean(rowMeans(rove_beetles_dist_matrix_E_OG ))
+mean(colMeans(rove_beetles_dist_matrix_E_OG ))
+
+rove_beetles_dist_matrix_F_OG <- as.data.frame(rove_beetles_dist_matrix_F) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_F_OG <- as.matrix(rove_beetles_dist_matrix_F_OG )
+mean(rowMeans(rove_beetles_dist_matrix_F_OG ))
+mean(colMeans(rove_beetles_dist_matrix_F_OG ))
+
+rove_beetles_dist_matrix_LFE_OG <- as.data.frame(rove_beetles_dist_matrix_LFE) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_LFE_OG <- as.matrix(rove_beetles_dist_matrix_LFE_OG )
+mean(rowMeans(rove_beetles_dist_matrix_LFE_OG ))
+mean(colMeans(rove_beetles_dist_matrix_LFE_OG )) 
+
+rove_beetles_dist_matrix_LF1_OG <- as.data.frame(rove_beetles_dist_matrix_LF1) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_LF1_OG <- as.matrix(rove_beetles_dist_matrix_LF1_OG )
+mean(rowMeans(rove_beetles_dist_matrix_LF1_OG ))
+mean(colMeans(rove_beetles_dist_matrix_LF1_OG ))
+
+rove_beetles_dist_matrix_LF2_OG <- as.data.frame(rove_beetles_dist_matrix_LF2) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_LF2_OG <- as.matrix(rove_beetles_dist_matrix_LF2_OG )
+mean(rowMeans(rove_beetles_dist_matrix_LF2_OG ))
+mean(colMeans(rove_beetles_dist_matrix_LF2_OG ))
+
+rove_beetles_dist_matrix_LF3_OG <- as.data.frame(rove_beetles_dist_matrix_LF3) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_LF3_OG <- as.matrix(rove_beetles_dist_matrix_LF3_OG )
+mean(rowMeans(rove_beetles_dist_matrix_LF3_OG ))
+mean(colMeans(rove_beetles_dist_matrix_LF3_OG ))
+
+rove_beetles_dist_matrix_VJR_OG <- as.data.frame(rove_beetles_dist_matrix_VJR) %>%  select_if(grepl("OG", names(.)))
+rove_beetles_dist_matrix_VJR_OG <- as.matrix(rove_beetles_dist_matrix_VJR_OG )
+mean(rowMeans(rove_beetles_dist_matrix_VJR_OG ))
+mean(colMeans(rove_beetles_dist_matrix_VJR_OG )) 
+
+rove_beetles_BC_OG <- data.frame(block = c('A', 'B', 'C', 'D', 'E', 'F', 'LF1', 'LFE' ,'LF2', 'LF3', 'VJR'),
+                         BC_OG = c(mean(colMeans(rove_beetles_dist_matrix_A_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_B_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_C_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_D_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_E_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_F_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_LFE_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_LF1_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_LF2_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_LF3_OG )),
+                                   mean(colMeans(rove_beetles_dist_matrix_VJR_OG ))),
+                         Taxa = 'rove_beetles')
+rove_beetles_BC_OG
+
+# BC_OG is Bray-Curtis compared to OG. Initally it shows Bray-Curtis dissimilarity, but changing it to 1-dissimilarity, which is Bray-Curtis similarity. 
+rove_beetles_BC_OG$BC_OG <- 1 - rove_beetles_BC_OG$BC_OG 
+
+rove_beetles_BC_OG <- left_join(rove_beetles_BC_OG, ACD_rove_beetles_summary, by = 'block')
+
+#### Scarabs ####
+library(vegan)
+scarabs_dist_matrix <- vegdist(scarabs_composition_matrix, method = 'bray')
+scarabs_dist_matrix
+
+scarabs_dist_matrix <- as.matrix(scarabs_dist_matrix)
+scarabs_dist_matrix_A <- scarabs_dist_matrix[ - grep("A", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_B <- scarabs_dist_matrix[ - grep("B", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_C <- scarabs_dist_matrix[ - grep("C", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_D <- scarabs_dist_matrix[ - grep("D", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_E <- scarabs_dist_matrix[  grep(c("A|B|C|D|F|LFE|LF1|LF2|LF3|VJR|OG"), rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_F <- scarabs_dist_matrix[ - grep("F_", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_LFE <- scarabs_dist_matrix[ - grep("LFE", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_LF1 <- scarabs_dist_matrix[ - grep("LFE", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_LF2 <- scarabs_dist_matrix[ - grep("LF2", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_LF3 <- scarabs_dist_matrix[ - grep("LF3", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+scarabs_dist_matrix_VJR <- scarabs_dist_matrix[ - grep("VJR", rownames(scarabs_dist_matrix), invert = TRUE) , ]
+scarabs_dist_matrix_OG <- scarabs_dist_matrix[ - grep("OG", rownames(scarabs_dist_matrix), invert = TRUE) , ] 
+
+scarabs_dist_matrix_A_OG <- as.data.frame(scarabs_dist_matrix_A) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_A_OG <- as.matrix(scarabs_dist_matrix_A_OG )
+mean(rowMeans(scarabs_dist_matrix_A_OG ))
+mean(colMeans(scarabs_dist_matrix_A_OG )) 
+
+scarabs_dist_matrix_B_OG <- as.data.frame(scarabs_dist_matrix_B) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_B_OG <- as.matrix(scarabs_dist_matrix_B_OG )
+mean(rowMeans(scarabs_dist_matrix_B_OG ))
+mean(colMeans(scarabs_dist_matrix_B_OG ))
+
+scarabs_dist_matrix_C_OG <- as.data.frame(scarabs_dist_matrix_C) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_C_OG <- as.matrix(scarabs_dist_matrix_C_OG )
+mean(rowMeans(scarabs_dist_matrix_C_OG ))
+mean(colMeans(scarabs_dist_matrix_C_OG )) 
+
+scarabs_dist_matrix_D_OG <- as.data.frame(scarabs_dist_matrix_D) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_D_OG <- as.matrix(scarabs_dist_matrix_D_OG )
+mean(rowMeans(scarabs_dist_matrix_D_OG ))
+mean(colMeans(scarabs_dist_matrix_D_OG )) 
+
+scarabs_dist_matrix_E_OG <- as.data.frame(scarabs_dist_matrix_E) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_E_OG <- as.matrix(scarabs_dist_matrix_E_OG )
+mean(rowMeans(scarabs_dist_matrix_E_OG ))
+mean(colMeans(scarabs_dist_matrix_E_OG ))
+
+scarabs_dist_matrix_F_OG <- as.data.frame(scarabs_dist_matrix_F) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_F_OG <- as.matrix(scarabs_dist_matrix_F_OG )
+mean(rowMeans(scarabs_dist_matrix_F_OG ))
+mean(colMeans(scarabs_dist_matrix_F_OG ))
+
+scarabs_dist_matrix_LFE_OG <- as.data.frame(scarabs_dist_matrix_LFE) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_LFE_OG <- as.matrix(scarabs_dist_matrix_LFE_OG )
+mean(rowMeans(scarabs_dist_matrix_LFE_OG ))
+mean(colMeans(scarabs_dist_matrix_LFE_OG )) 
+
+scarabs_dist_matrix_LF1_OG <- as.data.frame(scarabs_dist_matrix_LF1) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_LF1_OG <- as.matrix(scarabs_dist_matrix_LF1_OG )
+mean(rowMeans(scarabs_dist_matrix_LF1_OG ))
+mean(colMeans(scarabs_dist_matrix_LF1_OG ))
+
+scarabs_dist_matrix_LF2_OG <- as.data.frame(scarabs_dist_matrix_LF2) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_LF2_OG <- as.matrix(scarabs_dist_matrix_LF2_OG )
+mean(rowMeans(scarabs_dist_matrix_LF2_OG ))
+mean(colMeans(scarabs_dist_matrix_LF2_OG ))
+
+scarabs_dist_matrix_LF3_OG <- as.data.frame(scarabs_dist_matrix_LF3) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_LF3_OG <- as.matrix(scarabs_dist_matrix_LF3_OG )
+mean(rowMeans(scarabs_dist_matrix_LF3_OG ))
+mean(colMeans(scarabs_dist_matrix_LF3_OG ))
+
+scarabs_dist_matrix_VJR_OG <- as.data.frame(scarabs_dist_matrix_VJR) %>%  select_if(grepl("OG", names(.)))
+scarabs_dist_matrix_VJR_OG <- as.matrix(scarabs_dist_matrix_VJR_OG )
+mean(rowMeans(scarabs_dist_matrix_VJR_OG ))
+mean(colMeans(scarabs_dist_matrix_VJR_OG )) 
+
+scarabs_BC_OG <- data.frame(block = c('A', 'B', 'C', 'D', 'E', 'F', 'LF1', 'LFE' ,'LF2', 'LF3', 'VJR'),
+                                 BC_OG = c(mean(colMeans(scarabs_dist_matrix_A_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_B_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_C_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_D_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_E_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_F_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_LFE_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_LF1_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_LF2_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_LF3_OG )),
+                                           mean(colMeans(scarabs_dist_matrix_VJR_OG ))),
+                                 Taxa = 'scarabs')
+
+scarabs_BC_OG
+
+# BC_OG is Bray-Curtis compared to OG. Initally it shows Bray-Curtis dissimilarity, but changing it to 1-dissimilarity, which is Bray-Curtis similarity. 
+scarabs_BC_OG$BC_OG <- 1 - scarabs_BC_OG$BC_OG 
+
+scarabs_BC_OG <- left_join(scarabs_BC_OG, ACD_scarabs_summary, by = 'block')
+
+
+#### Spiders ####
+
+library(vegan)
+spiders_dist_matrix <- vegdist(spiders_composition_matrix, method = 'bray')
+spiders_dist_matrix
+
+spiders_dist_matrix <- as.matrix(spiders_dist_matrix)
+
+spiders_dist_matrix_A <- spiders_dist_matrix[ - grep("A", rownames(spiders_dist_matrix), invert = TRUE) , ] 
+spiders_dist_matrix_B <- spiders_dist_matrix[ - grep("B", rownames(spiders_dist_matrix), invert = TRUE) , ] 
+spiders_dist_matrix_C <- spiders_dist_matrix[ - grep("C", rownames(spiders_dist_matrix), invert = TRUE) , ] 
+spiders_dist_matrix_D <- spiders_dist_matrix[ - grep("D", rownames(spiders_dist_matrix), invert = TRUE) , ] 
+spiders_dist_matrix_E <- spiders_dist_matrix[  grep(c("A|B|C|D|F|LFE|LF1|LF2|LF3|VJR|OG"), rownames(spiders_dist_matrix), invert = TRUE) , ] 
+spiders_dist_matrix_F <- spiders_dist_matrix[ - grep("F_", rownames(spiders_dist_matrix), invert = TRUE) , ] 
+spiders_dist_matrix_LF1 <- spiders_dist_matrix[ - grep("LF1", rownames(spiders_dist_matrix), invert = TRUE) , ] 
+spiders_dist_matrix_LF2 <- spiders_dist_matrix[ - grep("LF2", rownames(spiders_dist_matrix), invert = TRUE) , ] 
+spiders_dist_matrix_OG <- spiders_dist_matrix[ - grep("OG", rownames(spiders_dist_matrix), invert = TRUE) , ] 
+
+spiders_dist_matrix_A_OG <- as.data.frame(spiders_dist_matrix_A) %>%  select_if(grepl("OG", names(.)))
+spiders_dist_matrix_A_OG <- as.matrix(spiders_dist_matrix_A_OG )
+mean(rowMeans(spiders_dist_matrix_A_OG ))
+mean(colMeans(spiders_dist_matrix_A_OG )) 
+
+spiders_dist_matrix_B_OG <- as.data.frame(spiders_dist_matrix_B) %>%  select_if(grepl("OG", names(.)))
+spiders_dist_matrix_B_OG <- as.matrix(spiders_dist_matrix_B_OG )
+mean(rowMeans(spiders_dist_matrix_B_OG ))
+mean(colMeans(spiders_dist_matrix_B_OG ))
+
+spiders_dist_matrix_C_OG <- as.data.frame(spiders_dist_matrix_C) %>%  select_if(grepl("OG", names(.)))
+spiders_dist_matrix_C_OG <- as.matrix(spiders_dist_matrix_C_OG )
+mean(rowMeans(spiders_dist_matrix_C_OG ))
+mean(colMeans(spiders_dist_matrix_C_OG )) 
+
+spiders_dist_matrix_D_OG <- as.data.frame(spiders_dist_matrix_D) %>%  select_if(grepl("OG", names(.)))
+spiders_dist_matrix_D_OG <- as.matrix(spiders_dist_matrix_D_OG )
+mean(rowMeans(spiders_dist_matrix_D_OG ))
+mean(colMeans(spiders_dist_matrix_D_OG )) 
+
+spiders_dist_matrix_E_OG <- as.data.frame(spiders_dist_matrix_E) %>%  select_if(grepl("OG", names(.)))
+spiders_dist_matrix_E_OG <- as.matrix(spiders_dist_matrix_E_OG )
+mean(rowMeans(spiders_dist_matrix_E_OG ))
+mean(colMeans(spiders_dist_matrix_E_OG ))
+
+spiders_dist_matrix_F_OG <- as.data.frame(spiders_dist_matrix_F) %>%  select_if(grepl("OG", names(.)))
+spiders_dist_matrix_F_OG <- as.matrix(spiders_dist_matrix_F_OG )
+mean(rowMeans(spiders_dist_matrix_F_OG ))
+mean(colMeans(spiders_dist_matrix_F_OG ))
+
+spiders_dist_matrix_LF1_OG <- as.data.frame(spiders_dist_matrix_LF1) %>%  select_if(grepl("OG", names(.)))
+spiders_dist_matrix_LF1_OG <- as.matrix(spiders_dist_matrix_LF1_OG )
+mean(rowMeans(spiders_dist_matrix_LF1_OG ))
+mean(colMeans(spiders_dist_matrix_LF1_OG ))
+
+spiders_dist_matrix_LF2_OG <- as.data.frame(spiders_dist_matrix_LF2) %>%  select_if(grepl("OG", names(.)))
+spiders_dist_matrix_LF2_OG <- as.matrix(spiders_dist_matrix_LF2_OG )
+mean(rowMeans(spiders_dist_matrix_LF2_OG ))
+mean(colMeans(spiders_dist_matrix_LF2_OG ))
+
+spiders_BC_OG <- data.frame(block = c('A', 'B', 'C', 'D', 'E', 'F', 'LF1','LF2'),
+                            BC_OG = c(mean(colMeans(spiders_dist_matrix_A_OG )),
+                                      mean(colMeans(spiders_dist_matrix_B_OG )),
+                                      mean(colMeans(spiders_dist_matrix_C_OG )),
+                                      mean(colMeans(spiders_dist_matrix_D_OG )),
+                                      mean(colMeans(spiders_dist_matrix_E_OG )),
+                                      mean(colMeans(spiders_dist_matrix_F_OG )),
+                                      mean(colMeans(spiders_dist_matrix_LF1_OG )),
+                                      mean(colMeans(spiders_dist_matrix_LF2_OG ))),
+                            Taxa = 'spiders')
+spiders_BC_OG
+
+# BC_OG is Bray-Curtis compared to OG. Initally it shows Bray-Curtis dissimilarity, but changing it to 1-dissimilarity, which is Bray-Curtis similarity. 
+spiders_BC_OG$BC_OG <- 1 - spiders_BC_OG$BC_OG 
+
+spiders_BC_OG <- left_join(spiders_BC_OG, ACD_spiders_summary, by = 'block')
+
+#### Weevils ####
+library(vegan)
+weevils_dist_matrix <- vegdist(weevils_composition_matrix, method = 'bray')
+weevils_dist_matrix
+
+# e.g. select just OG and A sites from weevils_dist_matrix
+weevils_dist_matrix <- as.matrix(weevils_dist_matrix)
+weevils_dist_matrix_A <- weevils_dist_matrix[ - grep("A", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_B <- weevils_dist_matrix[ - grep("B", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_C <- weevils_dist_matrix[ - grep("C", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_D <- weevils_dist_matrix[ - grep("D", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_E <- weevils_dist_matrix[  grep(c("A|B|C|D|F|LFE|LF1|LF2|LF3|VJR|OG"), rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_F <- weevils_dist_matrix[ - grep("F_", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_LFE <- weevils_dist_matrix[ - grep("LFE", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_LF1 <- weevils_dist_matrix[ - grep("LF1", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_LF2 <- weevils_dist_matrix[ - grep("LF2", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_LF3 <- weevils_dist_matrix[ - grep("LF3", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+weevils_dist_matrix_VJR <- weevils_dist_matrix[ - grep("VJR", rownames(weevils_dist_matrix), invert = TRUE) , ]
+weevils_dist_matrix_OG <- weevils_dist_matrix[ - grep("OG", rownames(weevils_dist_matrix), invert = TRUE) , ] 
+
+weevils_dist_matrix_A_OG <- as.data.frame(weevils_dist_matrix_A) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_A_OG <- as.matrix(weevils_dist_matrix_A_OG )
+mean(rowMeans(weevils_dist_matrix_A_OG ))
+mean(colMeans(weevils_dist_matrix_A_OG )) 
+
+weevils_dist_matrix_B_OG <- as.data.frame(weevils_dist_matrix_B) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_B_OG <- as.matrix(weevils_dist_matrix_B_OG )
+mean(rowMeans(weevils_dist_matrix_B_OG ))
+mean(colMeans(weevils_dist_matrix_B_OG ))
+
+weevils_dist_matrix_C_OG <- as.data.frame(weevils_dist_matrix_C) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_C_OG <- as.matrix(weevils_dist_matrix_C_OG )
+mean(rowMeans(weevils_dist_matrix_C_OG ))
+mean(colMeans(weevils_dist_matrix_C_OG )) 
+
+weevils_dist_matrix_D_OG <- as.data.frame(weevils_dist_matrix_D) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_D_OG <- as.matrix(weevils_dist_matrix_D_OG )
+mean(rowMeans(weevils_dist_matrix_D_OG ))
+mean(colMeans(weevils_dist_matrix_D_OG )) 
+
+weevils_dist_matrix_E_OG <- as.data.frame(weevils_dist_matrix_E) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_E_OG <- as.matrix(weevils_dist_matrix_E_OG )
+mean(rowMeans(weevils_dist_matrix_E_OG ))
+mean(colMeans(weevils_dist_matrix_E_OG ))
+
+weevils_dist_matrix_F_OG <- as.data.frame(weevils_dist_matrix_F) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_F_OG <- as.matrix(weevils_dist_matrix_F_OG )
+mean(rowMeans(weevils_dist_matrix_F_OG ))
+mean(colMeans(weevils_dist_matrix_F_OG ))
+
+weevils_dist_matrix_LFE_OG <- as.data.frame(weevils_dist_matrix_LFE) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_LFE_OG <- as.matrix(weevils_dist_matrix_LFE_OG )
+mean(rowMeans(weevils_dist_matrix_LFE_OG ))
+mean(colMeans(weevils_dist_matrix_LFE_OG )) 
+
+weevils_dist_matrix_LF1_OG <- as.data.frame(weevils_dist_matrix_LF1) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_LF1_OG <- as.matrix(weevils_dist_matrix_LF1_OG )
+mean(rowMeans(weevils_dist_matrix_LF1_OG ))
+mean(colMeans(weevils_dist_matrix_LF1_OG ))
+
+weevils_dist_matrix_LF2_OG <- as.data.frame(weevils_dist_matrix_LF2) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_LF2_OG <- as.matrix(weevils_dist_matrix_LF2_OG )
+mean(rowMeans(weevils_dist_matrix_LF2_OG ))
+mean(colMeans(weevils_dist_matrix_LF2_OG ))
+
+weevils_dist_matrix_LF3_OG <- as.data.frame(weevils_dist_matrix_LF3) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_LF3_OG <- as.matrix(weevils_dist_matrix_LF3_OG )
+mean(rowMeans(weevils_dist_matrix_LF3_OG ))
+mean(colMeans(weevils_dist_matrix_LF3_OG ))
+
+weevils_dist_matrix_VJR_OG <- as.data.frame(weevils_dist_matrix_VJR) %>%  select_if(grepl("OG", names(.)))
+weevils_dist_matrix_VJR_OG <- as.matrix(weevils_dist_matrix_VJR_OG )
+mean(rowMeans(weevils_dist_matrix_VJR_OG ))
+mean(colMeans(weevils_dist_matrix_VJR_OG )) 
+
+weevils_BC_OG <- data.frame(block = c('A', 'B', 'C', 'D', 'E', 'F', 'LF1', 'LFE' ,'LF2', 'LF3', 'VJR'),
+                            BC_OG = c(mean(colMeans(weevils_dist_matrix_A_OG )),
+                                      mean(colMeans(weevils_dist_matrix_B_OG )),
+                                      mean(colMeans(weevils_dist_matrix_C_OG )),
+                                      mean(colMeans(weevils_dist_matrix_D_OG )),
+                                      mean(colMeans(weevils_dist_matrix_E_OG )),
+                                      mean(colMeans(weevils_dist_matrix_F_OG )),
+                                      mean(colMeans(weevils_dist_matrix_LFE_OG )),
+                                      mean(colMeans(weevils_dist_matrix_LF1_OG )),
+                                      mean(colMeans(weevils_dist_matrix_LF2_OG )),
+                                      mean(colMeans(weevils_dist_matrix_LF3_OG )),
+                                      mean(colMeans(weevils_dist_matrix_VJR_OG ))),
+                            Taxa = 'weevils')
+weevils_BC_OG
+
+# BC_OG is Bray-Curtis compared to OG. Initally it shows Bray-Curtis dissimilarity, but changing it to 1-dissimilarity, which is Bray-Curtis similarity. 
+weevils_BC_OG$BC_OG <- 1 - weevils_BC_OG$BC_OG 
+
+weevils_BC_OG <- left_join(weevils_BC_OG, ACD_weevils_summary, by = 'block')
+
+#### Plot together ####
+Breg_ants_BC_OG <- betareg(ants_BC_OG$BC_OG ~ ants_BC_OG$Mean_logACD)
+summary(Breg_ants_BC_OG ) # slope not significant
+ants_plot <- ggplot(aes(x = Mean_logACD,  y = BC_OG), data = ants_BC_OG) +
+  geom_point() +
+  geom_line(data = ants_BC_OG,
+            aes(x = Mean_logACD, y = exp(coef(Breg_ants_BC_OG)[1] + coef(Breg_ants_BC_OG)[2]*Mean_logACD)/
+                  (1 + exp(coef(Breg_ants_BC_OG)[1]  + coef(Breg_ants_BC_OG)[2]*Mean_logACD))),
+            linetype = 'dotted', size = 1.2) +
+  theme_classic() +
+ labs(x = '', y = 'Bray-Curtis similarity to old-growth forest') +
+
+  ggtitle('Ants') +
+  theme(axis.title = element_text(size = 17),
+        axis.text = element_text(size = 15),
+        plot.title = element_text(size = 17))
+ants_plot
+
+
+Breg_moths_BC_OG <- betareg(moths_BC_OG$BC_OG ~ moths_BC_OG$Mean_logACD)
+summary(Breg_moths_BC_OG ) # slope is significant
+moths_plot <- ggplot(aes(x = Mean_logACD,  y = BC_OG), data = moths_BC_OG) +
+  geom_point() +
+  geom_line(data = moths_BC_OG,
+            aes(x = Mean_logACD, y = exp(coef(Breg_moths_BC_OG)[1] + coef(Breg_moths_BC_OG)[2]*Mean_logACD)/
+                  (1 + exp(coef(Breg_moths_BC_OG)[1]  + coef(Breg_moths_BC_OG)[2]*Mean_logACD))),
+            linetype = 'solid', size = 1.2) +
+  theme_classic() +
+  labs(x = '', y = '') +
+  ggtitle('Moths') +
+  theme(axis.title = element_text(size = 17),
+        axis.text = element_text(size = 15),
+        plot.title = element_text(size = 17))
+moths_plot
+
+Breg_orthoptera_BC_OG <- betareg(orthoptera_BC_OG$BC_OG ~ orthoptera_BC_OG$Mean_logACD)
+summary(Breg_orthoptera_BC_OG ) # slope not significant
+orthoptera_plot <- ggplot(aes(x = Mean_logACD,  y = BC_OG), data = orthoptera_BC_OG) +
+  geom_point() +
+  geom_line(data = orthoptera_BC_OG,
+            aes(x = Mean_logACD, y = exp(coef(Breg_orthoptera_BC_OG)[1] + coef(Breg_orthoptera_BC_OG)[2]*Mean_logACD)/
+                  (1 + exp(coef(Breg_orthoptera_BC_OG)[1]  + coef(Breg_orthoptera_BC_OG)[2]*Mean_logACD))), 
+            linetype = 'dotted', size = 1.2) +
+  theme_classic() +
+  labs(x = '', y = '') +
+  ggtitle('Orthoptera') +
+  theme(axis.title = element_text(size = 17),
+        axis.text = element_text(size = 15),
+        plot.title = element_text(size = 17))
+orthoptera_plot 
+
+
+Breg_rove_beetles_BC_OG <- betareg(rove_beetles_BC_OG$BC_OG ~ rove_beetles_BC_OG$Mean_logACD)
+summary(Breg_rove_beetles_BC_OG ) # slope is significant
+rove_beetles_plot <- ggplot(aes(x = Mean_logACD,  y = BC_OG), data = rove_beetles_BC_OG) +
+  geom_point() +
+  geom_line(data = rove_beetles_BC_OG,
+            aes(x = Mean_logACD, y = exp(coef(Breg_rove_beetles_BC_OG)[1] + coef(Breg_rove_beetles_BC_OG)[2]*Mean_logACD)/
+                  (1 + exp(coef(Breg_rove_beetles_BC_OG)[1]  + coef(Breg_rove_beetles_BC_OG)[2]*Mean_logACD))), 
+            size = 1.2) +
+  theme_classic() +
+  labs(x = '', y = '') +
+  ggtitle('Rove beetles') +
+  theme(axis.title = element_text(size = 17),
+        axis.text = element_text(size = 15),
+        plot.title = element_text(size = 17))
+rove_beetles_plot
+
+Breg_scarabs_BC_OG <- betareg(scarabs_BC_OG$BC_OG ~ scarabs_BC_OG$Mean_logACD)
+summary(Breg_scarabs_BC_OG ) # slope is significant
+scarabs_plot <- ggplot(aes(x = Mean_logACD,  y = BC_OG), data = scarabs_BC_OG) +
+  geom_point() +
+  geom_line(data = scarabs_BC_OG,
+            aes(x = Mean_logACD, y = exp(coef(Breg_scarabs_BC_OG)[1] + coef(Breg_scarabs_BC_OG)[2]*Mean_logACD)/
+                  (1 + exp(coef(Breg_scarabs_BC_OG)[1]  + coef(Breg_scarabs_BC_OG)[2]*Mean_logACD))), 
+            size = 1.2) +
+  theme_classic() +
+  labs(x = '', y = '') +
+  ggtitle('Scarabs') +
+  theme(axis.title = element_text(size = 17),
+        axis.text = element_text(size = 15),
+        plot.title = element_text(size = 17))
+scarabs_plot 
+
+Breg_spiders_BC_OG <- betareg(spiders_BC_OG$BC_OG ~ spiders_BC_OG$Mean_logACD)
+summary(Breg_spiders_BC_OG ) # slope not significant
+spiders_plot <- ggplot(aes(x = Mean_logACD,  y = BC_OG), data = spiders_BC_OG) +
+  geom_point() +
+  geom_line(data = spiders_BC_OG,
+            aes(x = Mean_logACD, y = exp(coef(Breg_spiders_BC_OG)[1] + coef(Breg_spiders_BC_OG)[2]*Mean_logACD)/
+                  (1 + exp(coef(Breg_spiders_BC_OG)[1]  + coef(Breg_spiders_BC_OG)[2]*Mean_logACD))), 
+            size = 1.2, linetype = 'dotted') +
+  theme_classic() +
+  labs(x = 'log(ACD)', y = '') +
+  ggtitle('Spiders') +
+  theme(axis.title = element_text(size = 17),
+        axis.text = element_text(size = 15),
+        plot.title = element_text(size = 17))
+spiders_plot 
+
+Breg_weevils_BC_OG <- betareg(weevils_BC_OG$BC_OG ~ weevils_BC_OG$Mean_logACD)
+summary(Breg_weevils_BC_OG ) # slope is significant
+weevils_plot <- ggplot(aes(x = Mean_logACD,  y = BC_OG), data = weevils_BC_OG) +
+  geom_point() +
+  geom_line(data = weevils_BC_OG,
+            aes(x = Mean_logACD, y = exp(coef(Breg_weevils_BC_OG)[1] + coef(Breg_weevils_BC_OG)[2]*Mean_logACD)/
+                  (1 + exp(coef(Breg_weevils_BC_OG)[1]  + coef(Breg_weevils_BC_OG)[2]*Mean_logACD))), 
+            size = 1.2) +
+  theme_classic() +
+  labs(x = '', y = '') +
+  ggtitle('Weevils') +
+  theme(axis.title = element_text(size = 17),
+        axis.text = element_text(size = 15),
+        plot.title = element_text(size = 17))
+weevils_plot 
+
+
+library(cowplot)
+all_plot <- plot_grid(ants_plot, moths_plot, orthoptera_plot, NULL, rove_beetles_plot, scarabs_plot, spiders_plot, weevils_plot,
+                      nrow = 2)
+all_plot 
