@@ -1,0 +1,465 @@
+#################################################################################
+############ Species richness across a gradient of logging intensity ############
+#################################################################################
+
+library(dplyr)
+library(ggplot2)
+library(fossil)
+library(safedata)
+library(tibble)
+library(tidyr)
+library(vegan)
+
+set_safe_dir('my_safe_directory')
+
+## ACD data
+ACD_all <- read.csv("data/ACD_LIDAR.csv")
+colnames(ACD_all) <- slice(ACD_all, 5)
+ACD_all <- ACD_all[-(1:5), ]
+ACD_all$agb <- as.numeric(ACD_all$agb)
+summary(ACD_all$agb)
+ACD_all$logACD <- log10(as.numeric(ACD_all$agb))
+
+
+#### Ants ---------------------------------------------------------------
+
+##### Prep data ---------------------------------------------------------
+
+
+## Community composition data
+ants_composition_matrix <- load_safe_data(3876227, 'Ant_Attendance_Summary')
+ants_composition_matrix <- subset(ants_composition_matrix, select = -c(Date, Block))
+rownames(ants_composition_matrix) <- ants_composition_matrix[,1]
+ants_composition_matrix <- ants_composition_matrix[, -1]
+ants_composition_matrix <- ants_composition_matrix[ grep("OP", rownames(ants_composition_matrix), invert = TRUE) , ] 
+ants_composition_matrix <- ants_composition_matrix[, which(colSums(ants_composition_matrix) != 0)]
+
+## Mean ACD
+ACD_ants <- subset(ACD_all, ACD_all$ID %in% rownames(ants_composition_matrix))
+ACD_ants <- separate(ACD_ants, ID, into = c("block", "num"), remove = FALSE)
+ACD_ants <- as.data.frame(ACD_ants %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+ACD_ants_summary <- as.data.frame(ACD_ants %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+
+#### Species richness ------------------------------------------------------------
+ants_composition_matrix <- as.data.frame(ants_composition_matrix) %>%
+  rownames_to_column(var = "rowname") %>% 
+  separate(rowname, into = c("block", "num"), sep = "_") %>%
+  select(-num) 
+
+# split into separate composition matrices for each block
+ants_composition_matrix_split <- split(ants_composition_matrix, ants_composition_matrix$block)
+
+# calculate species richness in each block
+richness <- function(comp_mat){
+  sums <- colSums(comp_mat[,2:ncol(comp_mat)])
+  rich <- length(which(sums != 0))
+  return(rich)
+}
+
+ants_richness <- t(as.data.frame(lapply(ants_composition_matrix_split, richness)))
+colnames(ants_richness) <- 'richness'
+ants_richness <- as.data.frame(ants_richness)
+ants_richness$taxa <- 'ants'
+ants_richness
+
+ants_richness$block <- rownames(ants_richness)
+
+ants_richness <- left_join(ants_richness, ACD_ants_summary, by = 'block')
+
+
+
+
+#### Moths -----------------------------------------------------
+
+##### Prep data ---------------------------------------------
+
+## Community composition data
+moths_composition_matrix <- load_safe_data(4247169, 'MothAssem')
+moths_composition_matrix <- subset(moths_composition_matrix, select = -c(Date, Type))
+rownames(moths_composition_matrix) <- moths_composition_matrix$Location
+moths_composition_matrix <- subset(moths_composition_matrix, select = - Location)
+moths_composition_matrix <- moths_composition_matrix[ grep("OP", rownames(moths_composition_matrix), invert = TRUE) , ] # Remove oil palm plantations
+colnames(moths_composition_matrix) <- gsub("_count", "", colnames(moths_composition_matrix))
+moths_composition_matrix <- moths_composition_matrix[, which(colSums(moths_composition_matrix) != 0)]
+
+## Mean ACD
+ACD_moths <- subset(ACD_all, ACD_all$ID %in% rownames(moths_composition_matrix))
+ACD_moths <- separate(ACD_moths, ID, into = c("block", "num"), remove = FALSE)
+ACD_moths <- as.data.frame(ACD_moths %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+ACD_moths_summary <- as.data.frame(ACD_moths %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+
+##### Species richness ----------------------------
+
+moths_composition_matrix <- as.data.frame(moths_composition_matrix) %>%
+  rownames_to_column(var = "rowname") %>% 
+  separate(rowname, into = c("block", "num"), sep = "_") %>%
+  select(-num) 
+
+moths_composition_matrix_split <- split(moths_composition_matrix, moths_composition_matrix$block)
+
+
+richness <- function(comp_mat){
+  sums <- colSums(comp_mat[,2:ncol(comp_mat)])
+  rich <- length(which(sums != 0))
+  return(rich)
+}
+
+moths_richness <- t(as.data.frame(lapply(moths_composition_matrix_split, richness)))
+colnames(moths_richness) <- 'richness'
+moths_richness <- as.data.frame(moths_richness)
+moths_richness$taxa <- 'moths'
+moths_richness
+
+moths_richness$block <- rownames(moths_richness)
+
+moths_richness <- left_join(moths_richness, ACD_moths_summary, by = 'block')
+
+
+#### Orthoptera -------------------------------------------
+
+##### Prep data -----------------------------------------------
+
+orthoptera_composition_matrix <- load_safe_data(7011354, 'OrthopteraAssem')
+orthoptera_composition_matrix <- subset(orthoptera_composition_matrix, select = -c( Date1, Date2, Type, Collector)) 
+rownames(orthoptera_composition_matrix) <- orthoptera_composition_matrix[, 1] 
+orthoptera_composition_matrix <- orthoptera_composition_matrix[, -1]
+orthoptera_composition_matrix <- orthoptera_composition_matrix[ grep("OP", rownames(orthoptera_composition_matrix), invert = TRUE) , ]
+orthoptera_composition_matrix <- orthoptera_composition_matrix[, which(colSums(orthoptera_composition_matrix) != 0)]
+colnames(orthoptera_composition_matrix) <- gsub("_count", "", colnames(orthoptera_composition_matrix))
+
+## Mean ACD
+ACD_orthoptera <- subset(ACD_all, ACD_all$ID %in% rownames(orthoptera_composition_matrix))
+ACD_orthoptera <- separate(ACD_orthoptera, ID, into = c("block", "num"), remove = FALSE)
+ACD_orthoptera <- as.data.frame(ACD_orthoptera %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+ACD_orthoptera_summary <- as.data.frame(ACD_orthoptera %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+
+##### Species richness ------------------------
+orthoptera_composition_matrix <- as.data.frame(orthoptera_composition_matrix) %>%
+  rownames_to_column(var = "rowname") %>% 
+  separate(rowname, into = c("block", "num"), sep = "_") %>%
+  select(-num) 
+
+orthoptera_composition_matrix_split <- split(orthoptera_composition_matrix, orthoptera_composition_matrix$block)
+
+richness <- function(comp_mat){
+  sums <- colSums(comp_mat[,2:ncol(comp_mat)])
+  rich <- length(which(sums != 0))
+  return(rich)
+}
+
+orthoptera_richness <- t(as.data.frame(lapply(orthoptera_composition_matrix_split, richness)))
+colnames(orthoptera_richness) <- 'richness'
+orthoptera_richness <- as.data.frame(orthoptera_richness)
+orthoptera_richness$taxa <- 'orthoptera'
+orthoptera_richness
+
+orthoptera_richness$block <- rownames(orthoptera_richness)
+
+orthoptera_richness <- left_join(orthoptera_richness, ACD_orthoptera_summary, by = 'block')
+
+
+#### Rove beetles -----------------------------------------------
+
+##### Prep data -------------------------------------------
+rove_beetles <- load_safe_data(1323504, 'Staphs')
+rove_beetles <- rove_beetles[ grep("OP", rove_beetles$site, invert = TRUE) , ] 
+rove_beetles <- subset(rove_beetles, taxon != 'Staphylinidae')
+rove_beetles <- subset(rove_beetles, taxon != 'Anotylus') 
+rove_beetles <- subset(rove_beetles, taxon != 'Thinocharis')
+count <- rove_beetles %>% group_by(site) %>% add_count(taxon)
+rove_beetles$Count <- count$n
+rove_beetles <- as.data.frame(rove_beetles %>% group_by(site) %>% distinct(taxon, .keep_all= TRUE)) # Remove repetition
+rove_beetles_composition_matrix <- create.matrix(rove_beetles,  tax.name = "taxon",  locality = "site", abund = TRUE, abund.col = "Count")
+rove_beetles_composition_matrix <- as.data.frame(t(rove_beetles_composition_matrix))
+
+## Mean ACD
+ACD_rove_beetles <- subset(ACD_all, ACD_all$ID %in% rownames(rove_beetles_composition_matrix))
+ACD_rove_beetles <- separate(ACD_rove_beetles, ID, into = c("block", "num"), remove = FALSE)
+ACD_rove_beetles <- as.data.frame(ACD_rove_beetles %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+ACD_rove_beetles_summary <- as.data.frame(ACD_rove_beetles %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+
+##### Species richness --------------------------------------------
+rove_beetles_composition_matrix <- as.data.frame(rove_beetles_composition_matrix) %>%
+  rownames_to_column(var = "rowname") %>% 
+  separate(rowname, into = c("block", "num"), sep = "_") %>%
+  select(-num) 
+
+rove_beetles_composition_matrix_split <- split(rove_beetles_composition_matrix, rove_beetles_composition_matrix$block)
+
+
+richness <- function(comp_mat){
+  sums <- colSums(comp_mat[,2:ncol(comp_mat)])
+  rich <- length(which(sums != 0))
+  return(rich)
+}
+
+rove_beetles_richness <- t(as.data.frame(lapply(rove_beetles_composition_matrix_split, richness)))
+colnames(rove_beetles_richness) <- 'richness'
+rove_beetles_richness <- as.data.frame(rove_beetles_richness)
+rove_beetles_richness$taxa <- 'rove_beetles'
+rove_beetles_richness
+
+rove_beetles_richness$block <- rownames(rove_beetles_richness)
+
+rove_beetles_richness <- left_join(rove_beetles_richness, ACD_rove_beetles_summary, by = 'block')
+
+
+
+#### Scarabs ---------------------------------------------------
+## Community composition
+scarabs <- load_safe_data(1323504, 'Scarabs')
+scarabs <- scarabs[ grep("OP", scarabs$site, invert = TRUE) , ] 
+count <- scarabs %>% group_by(site) %>% add_count(taxon)
+scarabs$Count <- count$n
+scarabs <- as.data.frame(scarabs %>% group_by(site) %>% distinct(taxon, .keep_all= TRUE)) # Remove repetition
+scarabs_composition_matrix <- create.matrix(scarabs,  tax.name = "taxon",  locality = "site", abund = TRUE, abund.col = "Count")
+scarabs_composition_matrix <- t(scarabs_composition_matrix)
+
+
+## Mean ACD
+ACD_scarabs <- subset(ACD_all, ACD_all$ID %in% rownames(scarabs_composition_matrix))
+ACD_scarabs <- separate(ACD_scarabs, ID, into = c("block", "num"), remove = FALSE)
+ACD_scarabs <- as.data.frame(ACD_scarabs %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+ACD_scarabs_summary <- as.data.frame(ACD_scarabs %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+
+scarabs_composition_matrix <- as.data.frame(scarabs_composition_matrix) %>%
+  rownames_to_column(var = "rowname") %>% 
+  separate(rowname, into = c("block", "num"), sep = "_") %>%
+  select(-num) 
+
+scarabs_composition_matrix_split <- split(scarabs_composition_matrix, scarabs_composition_matrix$block)
+
+richness <- function(comp_mat){
+  sums <- colSums(comp_mat[,2:ncol(comp_mat)])
+  rich <- length(which(sums != 0))
+  return(rich)
+}
+
+scarabs_richness <- t(as.data.frame(lapply(scarabs_composition_matrix_split, richness)))
+colnames(scarabs_richness) <- 'richness'
+scarabs_richness <- as.data.frame(scarabs_richness)
+scarabs_richness$taxa <- 'scarabs'
+
+scarabs_richness$block <- rownames(scarabs_richness)
+
+
+scarabs_richness <- left_join(scarabs_richness, ACD_scarabs_summary, by = 'block')
+
+
+#### Spiders --------------------------------------------------
+
+##### Data prep ---------------------------------------------------
+
+## Community composition
+spiders_composition_matrix <- load_safe_data(4139685, 'SpiderAssem')
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = -c(Date, Type))
+rownames(spiders_composition_matrix) <- spiders_composition_matrix$Location
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = - Location)
+spiders_composition_matrix <- spiders_composition_matrix[ grep("OP", rownames(spiders_composition_matrix), invert = TRUE) , ] 
+colnames(spiders_composition_matrix) <- gsub("_count", "", colnames(spiders_composition_matrix))
+spiders_composition_matrix <- spiders_composition_matrix[, which(colSums(spiders_composition_matrix) != 0)]
+spiders_composition_matrix <- subset(spiders_composition_matrix, select = -c(GNA01, HER01, PIS01, TEB01, SCY01, THS01))
+
+## Mean ACD
+ACD_spiders <- subset(ACD_all, ACD_all$ID %in% rownames(spiders_composition_matrix))
+ACD_spiders <- separate(ACD_spiders, ID, into = c("block", "num"), remove = FALSE)
+ACD_spiders <- as.data.frame(ACD_spiders %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+ACD_spiders_summary <- as.data.frame(ACD_spiders %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+
+##### Species richness ----------------------------------
+spiders_composition_matrix <- as.data.frame(spiders_composition_matrix) %>%
+  rownames_to_column(var = "rowname") %>% 
+  separate(rowname, into = c("block", "num"), sep = "_") %>%
+  select(-num) 
+
+spiders_composition_matrix_split <- split(spiders_composition_matrix, spiders_composition_matrix$block)
+
+richness <- function(comp_mat){
+  sums <- colSums(comp_mat[,2:ncol(comp_mat)])
+  rich <- length(which(sums != 0))
+  return(rich)
+}
+
+spiders_richness <- t(as.data.frame(lapply(spiders_composition_matrix_split, richness)))
+colnames(spiders_richness) <- 'richness'
+spiders_richness <- as.data.frame(spiders_richness)
+spiders_richness$taxa <- 'spiders'
+
+
+spiders_richness$block <- rownames(spiders_richness)
+
+spiders_richness <- left_join(spiders_richness, ACD_spiders_summary, by = 'block')
+
+
+
+#### Weevils --------------------------------------------
+
+##### Data prep ---------------------------
+
+## Community composition
+weevils <- load_safe_data(1323504, 'Weevils')
+weevils <- weevils[ grep("OP", weevils$site, invert = TRUE) , ] 
+count <- weevils %>% group_by(site) %>% add_count(taxon)
+weevils$Count <- count$n
+weevils <- as.data.frame(weevils %>% group_by(site) %>% distinct(taxon, .keep_all= TRUE)) # Remove repetition
+weevils_composition_matrix <- create.matrix(weevils,  tax.name = "taxon",  locality = "site", abund = TRUE, abund.col = "Count")
+weevils_composition_matrix <- t(weevils_composition_matrix)
+
+## Mean ACD
+ACD_weevils <- subset(ACD_all, ACD_all$ID %in% rownames(weevils_composition_matrix))
+ACD_weevils <- separate(ACD_weevils, ID, into = c("block", "num"), remove = FALSE)
+ACD_weevils <- as.data.frame(ACD_weevils %>% group_by(block) %>% mutate(Mean_logACD = mean(logACD)))
+ACD_weevils_summary <- as.data.frame(ACD_weevils %>% group_by(block) %>% distinct(block, .keep_all= TRUE) %>% select(block, Mean_logACD))
+
+
+
+##### Species richness ---------------------------
+weevils_composition_matrix <- as.data.frame(weevils_composition_matrix) %>%
+  rownames_to_column(var = "rowname") %>% 
+  separate(rowname, into = c("block", "num"), sep = "_") %>%
+  select(-num) 
+
+weevils_composition_matrix_split <- split(weevils_composition_matrix, weevils_composition_matrix$block)
+
+richness <- function(comp_mat){
+  sums <- colSums(comp_mat[,2:ncol(comp_mat)])
+  rich <- length(which(sums != 0))
+  return(rich)
+}
+
+weevils_richness <- t(as.data.frame(lapply(weevils_composition_matrix_split, richness)))
+colnames(weevils_richness) <- 'richness'
+weevils_richness <- as.data.frame(weevils_richness)
+weevils_richness$taxa <- 'weevils'
+
+
+weevils_richness$block <- rownames(weevils_richness)
+
+weevils_richness <- left_join(weevils_richness, ACD_weevils_summary, by = 'block')
+
+
+
+#### plot ----------------------
+
+richness_data <-rbind(ants_richness, moths_richness, orthoptera_richness, 
+                       rove_beetles_richness, scarabs_richness, spiders_richness, 
+                       weevils_richness)
+
+plot(richness ~ Mean_logACD, data = richness_data)
+
+all_reg <- lm(richness ~ Mean_logACD, data = richness_data)
+summary(all_reg)
+
+
+
+mem <- lmerTest::lmer(richness ~ Mean_logACD + (1|taxa), data = richness_data)
+summary(mem)
+
+taxa_reg <- lm(richness ~ Mean_logACD*taxa, data = richness_data)
+summary(taxa_reg)
+
+colours <-  c('#a6cee3', '#FB9A99', '#CAB2D6', '#1F78B4',  'grey', '#E31A1C', '#6A3D9A')
+shapes <-  c(16, 17, 15, 16, 18, 17, 15)
+linetypes <- c('longdash', 'dotted', 'dotdash', 'longdash', 'longdash', 'dotted', 'dotdash')
+
+
+
+ggplot() +
+  geom_point(data = richness_data, aes(x = Mean_logACD, y = richness, colour = taxa, shape = taxa), size = 2.9, stroke = 1.058) + 
+  
+  scale_colour_manual(values = colours) +
+  scale_shape_manual(values = shapes) +
+  scale_linetype_manual(values = linetypes) +
+  
+  # individual groups of taxa
+  geom_line(data = richness_data, aes(x = Mean_logACD, y = predict(taxa_reg), colour = taxa, linetype = taxa), size = 0.8)  +
+  
+  # all
+  geom_line(data = richness_data, aes(x = Mean_logACD,  y =predict(lm(richness ~ Mean_logACD, data = richness_data))), linetype = 'dotted', colour = 'black', size = 2) +  
+  
+  theme_classic() +
+  theme( axis.text=element_text(size=21, colour = 'black'),  
+         axis.title.x=element_text(size=21),
+         axis.title.y = element_text(size = 35),
+         legend.position = 'right', 
+         legend.title = element_blank(),
+         legend.text = element_text(size = 20),
+         plot.margin = margin(0.7,0.7,0.7,0.7, 'cm')) +
+  labs(x = 'log(ACD)', y = 'Species richness') 
+
+
+
+
+
+rich_coefs <- coef(taxa_reg)
+rich_confints <- confint(taxa_reg)
+
+rich_slope_ants <- rich_coefs[2]
+rich_slope_moths <- rich_coefs[2] + rich_coefs[9]
+rich_slope_orthoptera <- rich_coefs[2] + rich_coefs[10]
+rich_slope_rove_beetles <- rich_coefs[2] + rich_coefs[11]
+rich_slope_scarabs <- rich_coefs[2] + rich_coefs[12]
+rich_slope_spiders <- rich_coefs[2] + rich_coefs[13]
+rich_slope_weevils <- rich_coefs[2] + rich_coefs[14]
+
+rich_lci_ants <- rich_confints[2,1]
+rich_lci_moths <- rich_confints[2,1] + rich_confints[9,1]
+rich_lci_orthoptera <- rich_confints[2,1] + rich_confints[10,1]
+rich_lci_rove_beetles <- rich_confints[2,1] + rich_confints[11,1]
+rich_lci_scarabs <- rich_confints[2,1] + rich_confints[12,1]
+rich_lci_spiders <- rich_confints[2,1] + rich_confints[13,1]
+rich_lci_weevils <- rich_confints[2,1] + rich_confints[14,1]
+
+rich_uci_ants <- rich_confints[2,2]
+rich_uci_moths <- rich_confints[2,2] + rich_confints[9,2]
+rich_uci_orthoptera <- rich_confints[2,2] + rich_confints[10,2]
+rich_uci_rove_beetles <- rich_confints[2,2] + rich_confints[11,2]
+rich_uci_scarabs <- rich_confints[2,2] + rich_confints[12,2]
+rich_uci_spiders <- rich_confints[2,2] + rich_confints[13,2]
+rich_uci_weevils <- rich_confints[2,2] + rich_confints[14,2]
+
+
+rich_betareg_taxa_results <-  data.frame(taxon = c('Ants', 'Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders', 'Weevils'), 
+                                        slope = c(rich_slope_ants, rich_slope_moths, rich_slope_orthoptera, rich_slope_rove_beetles, rich_slope_scarabs, rich_slope_spiders, rich_slope_weevils),
+                                        lci = c(rich_lci_ants, rich_lci_moths, rich_lci_orthoptera, rich_lci_rove_beetles, rich_lci_scarabs, rich_lci_spiders, rich_lci_weevils),
+                                        uci = c(rich_uci_ants, rich_uci_moths, rich_uci_orthoptera, rich_uci_rove_beetles, rich_uci_scarabs, rich_uci_spiders, rich_uci_weevils))
+
+
+
+rich_betareg_taxa_results
+
+
+### Species-level averages to compare to the iCAMP relative importance of each process
+richness_summary <- richness_data %>% group_by(taxa) %>% summarise(mean = mean(richness), 
+                                               uci = quantile(richness, 0.95),
+                                               lci = quantile(richness, 0.05))
+
+ggplot(data = richness_summary, aes(y = mean, x = taxa, fill = taxa, colour = taxa, shape = taxa)) +
+  geom_errorbar(data = richness_summary, aes( ymin = lci, ymax = uci), width = 0,
+                position=position_dodge(width=0.8), show.legend = FALSE, size = 0.5) +
+  geom_point(size = 5, alpha = 0.9) +
+  
+  labs(x = "", y = "Species richness", 
+       shape = "taxa", colour = "taxa", fill = "taxa") +
+  
+  scale_colour_manual(values = colours,
+                      labels = c( 'Ants', 'Moths', 'Orthoptera', 'Rove beetles','Scarabs', 'Spiders',  'Weevils'))+
+  scale_x_discrete(labels = c('Ants','Moths',  'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders',  'Weevils')) +
+  scale_shape_manual(values = shapes, 
+                     labels = c('Ants','Moths',  'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders',  'Weevils'))+
+  
+  theme_classic() +
+  theme(axis.text.y=element_text(size=22, colour = 'black'), 
+        axis.title.y=element_text(size=18),
+       axis.text.x = element_text(size=15, colour = 'black'),
+        axis.ticks.x=element_blank(),
+        legend.title=element_blank(),
+        legend.text=element_text(size=18), 
+        legend.position = 'none',
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")) 
