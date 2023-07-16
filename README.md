@@ -12,7 +12,7 @@ Main_generalists-specialists: Compare stochasticity metrics between trophic gene
 
 Supp_sensitivity-analysis: Sensitivity analysis for sample sizes for spiders, Orthoptera and moths (supplementary text).
 
-Supp_community-similarity: Calculate Bray-Curtis similarity of each logged site to old-growth forest for each taxonomic group (figure S2).
+Supp_community-similarity: Calculate Bray-Curtis similarity of each logged site to old-growth forest (figure S2).
 
 Supp_sample-size: Plot figure S1 which shows sample sizes at each site for each taxonomic group. 
 
