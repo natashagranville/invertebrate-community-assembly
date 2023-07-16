@@ -1,13 +1,17 @@
+setwd("C:/Users/tasha/OneDrive - Imperial College London/Stochasticity project/Stochasticity_project")
+
+library(ggplot2)
+library(dplyr)
 
 #### NST -----------------------------------------------------------------------
 
-NST_ants_summary <- read.csv("Results/NST_ants_summary.csv")
-NST_moths_summary <- read.csv("Results/NST_moths_summary.csv")
-NST_orthoptera_summary <- read.csv("Results/NST_orthoptera_summary.csv")
-NST_rove_beetles_summary <- read.csv("Results/NST_rove_beetles_summary.csv")
-NST_scarabs_summary <- read.csv("Results/NST_scarabs_summary.csv")
-NST_spiders_summary <- read.csv("Results/NST_spiders_summary.csv")
-NST_weevils_summary <- read.csv("Results/NST_weevils_summary.csv")
+NST_ants_summary <- read.csv("results/NST_ants_summary.csv")
+NST_moths_summary <- read.csv("results/NST_moths_summary.csv")
+NST_orthoptera_summary <- read.csv("results/NST_orthoptera_summary.csv")
+NST_rove_beetles_summary <- read.csv("results/NST_rove_beetles_summary.csv")
+NST_scarabs_summary <- read.csv("results/NST_scarabs_summary.csv")
+NST_spiders_summary <- read.csv("results/NST_spiders_summary.csv")
+NST_weevils_summary <- read.csv("results/NST_weevils_summary.csv")
 
 NST_ants_summary$taxa <- 'ants'
 NST_moths_summary$taxa <- 'moths'
@@ -65,27 +69,61 @@ NST_all_summary %>% group_by(taxa) %>% summarise(mean = mean(mean))
 
 
 
+
+
 ##### Betareg #####
 library(betareg)
 
-betareg_NST <- betareg::betareg(mean~Mean_logACD * taxa , data = NST_all_summary)
-summary(betareg_NST)
-
-betareg_NST_all <- betareg::betareg(mean~Mean_logACD, data = NST_all_summary)
+betareg_NST_all <- betareg::betareg(mean~Mean_logACD  , data = NST_all_summary)
 summary(betareg_NST_all)
+confint(betareg_NST_all)
 
-summary(betareg(mean~Mean_logACD, data = NST_scarabs_summary))
-summary(betareg(mean~Mean_logACD, data = NST_rove_beetles_summary))
-summary(betareg(mean~Mean_logACD, data = NST_moths_summary))
-summary(betareg(mean~Mean_logACD, data = NST_ants_summary))
-summary(betareg(mean~Mean_logACD, data = NST_orthoptera_summary))
-summary(betareg(mean~Mean_logACD, data = NST_spiders_summary))
-summary(betareg(mean~Mean_logACD, data = NST_weevils_summary))
+betareg_NST_taxa <- betareg::betareg(mean~Mean_logACD * taxa  , data = NST_all_summary)
+summary(betareg_NST_taxa)
+confint(betareg_NST_taxa)
+
+
+NST_coefs <- coef(betareg_NST_taxa)
+NST_confints <- confint(betareg_NST_taxa)
+
+NST_slope_ants <- NST_coefs[2]
+NST_slope_moths <- NST_coefs[2] + NST_coefs[9]
+NST_slope_orthoptera <- NST_coefs[2] + NST_coefs[10]
+NST_slope_rove_beetles <- NST_coefs[2] + NST_coefs[11]
+NST_slope_scarabs <- NST_coefs[2] + NST_coefs[12]
+NST_slope_spiders <- NST_coefs[2] + NST_coefs[13]
+NST_slope_weevils <- NST_coefs[2] + NST_coefs[14]
+
+NST_lci_ants <- NST_confints[2,1]
+NST_lci_moths <- NST_confints[2,1] + NST_confints[9,1]
+NST_lci_orthoptera <- NST_confints[2,1] + NST_confints[10,1]
+NST_lci_rove_beetles <- NST_confints[2,1] + NST_confints[11,1]
+NST_lci_scarabs <- NST_confints[2,1] + NST_confints[12,1]
+NST_lci_spiders <- NST_confints[2,1] + NST_confints[13,1]
+NST_lci_weevils <- NST_confints[2,1] + NST_confints[14,1]
+
+NST_uci_ants <- NST_confints[2,2]
+NST_uci_moths <- NST_confints[2,2] + NST_confints[9,2]
+NST_uci_orthoptera <- NST_confints[2,2] + NST_confints[10,2]
+NST_uci_rove_beetles <- NST_confints[2,2] + NST_confints[11,2]
+NST_uci_scarabs <- NST_confints[2,2] + NST_confints[12,2]
+NST_uci_spiders <- NST_confints[2,2] + NST_confints[13,2]
+NST_uci_weevils <- NST_confints[2,2] + NST_confints[14,2]
+
+
+NST_betareg_taxa_results <-  data.frame(taxon = c('Ants', 'Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders', 'Weevils'), 
+                                        slope = c(NST_slope_ants, NST_slope_moths, NST_slope_orthoptera, NST_slope_rove_beetles, NST_slope_scarabs, NST_slope_spiders, NST_slope_weevils),
+                                        lci = c(NST_lci_ants, NST_lci_moths, NST_lci_orthoptera, NST_lci_rove_beetles, NST_lci_scarabs, NST_lci_spiders, NST_lci_weevils),
+                                        uci = c(NST_uci_ants, NST_uci_moths, NST_uci_orthoptera, NST_uci_rove_beetles, NST_uci_scarabs, NST_uci_spiders, NST_uci_weevils))
+
+NST_betareg_taxa_results
+
 
 ##### Graph #####
 colours <-  c('#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',  'grey',   '#E31A1C', '#6A3D9A')
 shapes <-  c(16, 17, 15, 16, 18, 17, 15)
 linetypes <- c('longdash', 'dotted', 'dotdash', 'longdash', 'longdash', 'dotted', 'dotdash')
+
 
 library(ggplot2)
 
@@ -97,7 +135,7 @@ NST_betareg_graph<-ggplot() +
   scale_linetype_manual(values = linetypes) +
   
   # individual groups of taxa
-  geom_line(data = NST_all_summary, aes(x = Mean_logACD, y = predict(betareg_NST), colour = taxa, linetype = taxa), size = 0.8)  +
+  geom_line(data = NST_all_summary, aes(x = Mean_logACD, y = predict(betareg_NST_taxa), colour = taxa, linetype = taxa), size = 0.8)  +
   
   # all
   geom_line(data = NST_all_summary, aes(x = Mean_logACD,  y =predict(betareg_NST_all)), linetype = 'dotted', colour = 'black', size = 2) +  
@@ -120,71 +158,108 @@ NST_betareg_graph<-ggplot() +
 NST_betareg_graph
 
 
-#### RC ------------------------------------------------------------------------
-RC_ants_summary <- read.csv("Results/RC_ants_summary.csv")
-RC_moths_summary <- read.csv("Results/RC_moths_summary.csv")
-RC_orthoptera_summary <- read.csv("Results/RC_orthoptera_summary.csv")
-RC_rove_beetles_summary <- read.csv("Results/RC_rove_beetles_summary.csv")
-RC_scarabs_summary <- read.csv("Results/RC_scarabs_summary.csv")
-RC_spiders_summary <- read.csv("Results/RC_spiders_summary.csv")
-RC_weevils_summary <- read.csv("Results/RC_weevils_summary.csv")
 
-RC_ants_summary$taxa <- 'Ants'
-RC_moths_summary$taxa <- 'Moths'
-RC_orthoptera_summary$taxa <- 'Orthoptera'
-RC_rove_beetles_summary$taxa <- 'Rove beetles'
-RC_scarabs_summary$taxa <- 'Scarabs'
-RC_spiders_summary$taxa <- 'Spiders'
-RC_weevils_summary$taxa <- 'Weevils'
+#### MST ------------------------------------------------------------------------
+MST_ants_summary <- read.csv("Results/MST_ants_summary.csv")
+MST_moths_summary <- read.csv("Results/MST_moths_summary.csv")
+MST_orthoptera_summary <- read.csv("Results/MST_orthoptera_summary.csv")
+MST_rove_beetles_summary <- read.csv("Results/MST_rove_beetles_summary.csv")
+MST_scarabs_summary <- read.csv("Results/MST_scarabs_summary.csv")
+MST_spiders_summary <- read.csv("Results/MST_spiders_summary.csv")
+MST_weevils_summary <- read.csv("Results/MST_weevils_summary.csv")
 
-RC_all_summary <- rbind(RC_ants_summary, RC_moths_summary, RC_orthoptera_summary, RC_rove_beetles_summary, 
-                         RC_scarabs_summary, RC_spiders_summary, RC_weevils_summary)
+MST_ants_summary$taxa <- 'Ants'
+MST_moths_summary$taxa <- 'Moths'
+MST_orthoptera_summary$taxa <- 'Orthoptera'
+MST_rove_beetles_summary$taxa <- 'Rove beetles'
+MST_scarabs_summary$taxa <- 'Scarabs'
+MST_spiders_summary$taxa <- 'Spiders'
+MST_weevils_summary$taxa <- 'Weevils'
+
+MST_all_summary <- rbind(MST_ants_summary, MST_moths_summary, MST_orthoptera_summary, MST_rove_beetles_summary, 
+                         MST_scarabs_summary, MST_spiders_summary, MST_weevils_summary)
+
+
 
 ##### Summary stats #####
 
-# Weighted overall mean RC
+# Weighted overall mean MST
 
-weighted_mean_RC <- weighted_mean(RC_all_summary)
-weighted_mean_RC 
+weighted_mean_MST <- weighted_mean(MST_all_summary)
+weighted_mean_MST 
 
 # Unweighted mean
-mean_RC = mean(RC_all_summary$mean)
-se_RC = sd(RC_all_summary$mean) / sqrt(length(RC_all_summary$mean))
-n_RC = length(RC_all_summary$mean)
-lower.ci_RC = mean_RC - qt(1 - (0.05 / 2), n_RC - 1) * se_RC
-upper.ci_RC = mean_RC + qt(1 - (0.05 / 2), n_RC - 1) * se_RC
+mean_MST = mean(MST_all_summary$mean)
+se_MST = sd(MST_all_summary$mean) / sqrt(length(MST_all_summary$mean))
+n_MST = length(MST_all_summary$mean)
+lower.ci_MST = mean_MST - qt(1 - (0.05 / 2), n_MST - 1) * se_MST
+upper.ci_MST = mean_MST + qt(1 - (0.05 / 2), n_MST - 1) * se_MST
 
-mean_RC
-lower.ci_RC
-upper.ci_RC
+mean_MST
+lower.ci_MST
+upper.ci_MST
 
 
-# T test - is the mean RC significantly different from 0.5?
-t.test(RC_all_summary$mean, mu = 0.5)
+# T test - is the mean MST significantly different from 0.5?
+t.test(MST_all_summary$mean, mu = 0.5)
 
 # ANOVA for evaluating differences among taxa
-RC_anova <- aov(mean ~ taxa, data = RC_all_summary)
-summary(RC_anova)
+MST_anova <- aov(mean ~ taxa, data = MST_all_summary)
+summary(MST_anova)
 
-boxplot(mean ~ taxa, data = RC_all_summary, xlab = "Taxa", ylab = "RC", cex.lab = 1.4, cex.axis = 1.3)
+boxplot(mean ~ taxa, data = MST_all_summary, xlab = "Taxa", ylab = "MST", cex.lab = 1.4, cex.axis = 1.3)
 
-RC_all_summary %>% group_by(taxa) %>% summarise(mean = mean(mean))
+MST_all_summary %>% group_by(taxa) %>% summarise(mean = mean(mean))
 
-###### Betareg #####
+
+
+
+##### Betareg #####
 library(betareg)
-betareg_RC <- betareg(mean~Mean_logACD * taxa , data = RC_all_summary)
-summary(betareg_RC)
 
-betareg_RC_all <- betareg(mean~Mean_logACD, data = RC_all_summary)
-summary(betareg_RC_all)
+betareg_MST_all <- betareg::betareg(mean~Mean_logACD  , data = MST_all_summary)
+summary(betareg_MST_all)
+confint(betareg_MST_all)
 
-summary(betareg(mean~Mean_logACD, data = RC_scarabs_summary))
-summary(betareg(mean~Mean_logACD, data = RC_rove_beetles_summary))
-summary(betareg(mean~Mean_logACD, data = RC_moths_summary))
-summary(betareg(mean~Mean_logACD, data = RC_ants_summary))
-summary(betareg(mean~Mean_logACD, data = RC_orthoptera_summary))
-summary(betareg(mean~Mean_logACD, data = RC_spiders_summary))
-summary(betareg(mean~Mean_logACD, data = RC_weevils_summary))
+betareg_MST_taxa <- betareg::betareg(mean~Mean_logACD * taxa  , data = MST_all_summary)
+summary(betareg_MST_taxa)
+confint(betareg_MST_taxa)
+
+
+MST_coefs <- coef(betareg_MST_taxa)
+MST_confints <- confint(betareg_MST_taxa)
+
+MST_slope_ants <- MST_coefs[2]
+MST_slope_moths <- MST_coefs[2] + MST_coefs[9]
+MST_slope_orthoptera <- MST_coefs[2] + MST_coefs[10]
+MST_slope_rove_beetles <- MST_coefs[2] + MST_coefs[11]
+MST_slope_scarabs <- MST_coefs[2] + MST_coefs[12]
+MST_slope_spiders <- MST_coefs[2] + MST_coefs[13]
+MST_slope_weevils <- MST_coefs[2] + MST_coefs[14]
+
+MST_lci_ants <- MST_confints[2,1]
+MST_lci_moths <- MST_confints[2,1] + MST_confints[9,1]
+MST_lci_orthoptera <- MST_confints[2,1] + MST_confints[10,1]
+MST_lci_rove_beetles <- MST_confints[2,1] + MST_confints[11,1]
+MST_lci_scarabs <- MST_confints[2,1] + MST_confints[12,1]
+MST_lci_spiders <- MST_confints[2,1] + MST_confints[13,1]
+MST_lci_weevils <- MST_confints[2,1] + MST_confints[14,1]
+
+MST_uci_ants <- MST_confints[2,2]
+MST_uci_moths <- MST_confints[2,2] + MST_confints[9,2]
+MST_uci_orthoptera <- MST_confints[2,2] + MST_confints[10,2]
+MST_uci_rove_beetles <- MST_confints[2,2] + MST_confints[11,2]
+MST_uci_scarabs <- MST_confints[2,2] + MST_confints[12,2]
+MST_uci_spiders <- MST_confints[2,2] + MST_confints[13,2]
+MST_uci_weevils <- MST_confints[2,2] + MST_confints[14,2]
+
+
+MST_betareg_taxa_results <-  data.frame(taxon = c('Ants', 'Moths', 'Orthoptera', 'Rove beetles', 'Scarabs', 'Spiders', 'Weevils'), 
+                                        slope = c(MST_slope_ants, MST_slope_moths, MST_slope_orthoptera, MST_slope_rove_beetles, MST_slope_scarabs, MST_slope_spiders, MST_slope_weevils),
+                                        lci = c(MST_lci_ants, MST_lci_moths, MST_lci_orthoptera, MST_lci_rove_beetles, MST_lci_scarabs, MST_lci_spiders, MST_lci_weevils),
+                                        uci = c(MST_uci_ants, MST_uci_moths, MST_uci_orthoptera, MST_uci_rove_beetles, MST_uci_scarabs, MST_uci_spiders, MST_uci_weevils))
+
+MST_betareg_taxa_results
 
 
 ##### Graph #####
@@ -192,36 +267,38 @@ colours <-  c('#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',  'grey',   '#E31A1C',
 shapes <-  c(16, 17, 15, 16, 18, 17, 15)
 linetypes <- c('longdash', 'dotted', 'dotdash', 'longdash', 'longdash', 'dotted', 'dotdash')
 
-RC_betareg_graph<-ggplot() +
-  geom_point(data = RC_all_summary, aes(x = Mean_logACD, y = mean, colour = taxa, shape = taxa), size = 2.9, stroke = 1.058) + 
+MST_betareg_graph<-ggplot() +
+  geom_point(data = MST_all_summary, aes(x = Mean_logACD, y = mean, colour = taxa, shape = taxa), size = 2.9, stroke = 1.058) + 
   
   scale_colour_manual(values = colours) +
   scale_shape_manual(values = shapes) +
   scale_linetype_manual(values = linetypes) +
   
-  # individual groups of taxa
-  geom_line(data = RC_all_summary, aes(x = Mean_logACD, y = predict(betareg_RC), colour = taxa, linetype = taxa), size = 0.8)  +
   
-  # all
-  geom_line(data = RC_all_summary, aes(x = Mean_logACD,  y =predict(betareg_RC_all)), linetype = 'dotted', colour = 'black', size = 2) +  
+  #all
+  geom_line(data = MST_all_summary, aes(x = Mean_logACD,  y =predict(betareg_MST_all)), linetype = 'dotted', colour = 'black', size = 2) +  
+  
+  # by taxa
+  geom_line(data = MST_all_summary, aes(x = Mean_logACD,  y =predict(betareg_MST_taxa), linetype = taxa, colour = taxa), size = 0.8) +  
+  
   
   # add point for overall weighted mean
-  geom_point(aes(x = 2.5, y = weighted_mean_RC[1]), size = 5)+
-  geom_errorbar(aes(x = 2.5, ymin = weighted_mean_RC[2], ymax = weighted_mean_RC[3]), width = 0.1, size = 0.7)+
+  geom_point(aes(x = 2.5, y = weighted_mean_MST[1]), size = 5)+
+  geom_errorbar(aes(x = 2.5, ymin = weighted_mean_MST[2], ymax = weighted_mean_MST[3]), width = 0.1, size = 0.7)+
   
   theme_classic() +
   theme( axis.text=element_text(size=21, colour = 'black'),  
          axis.title=element_text(size=21),
          legend.position = 'null', 
          plot.margin = margin(0,0,1,1, 'cm')) +
-  labs(x = expression('log'[10]~'(ACD)'),y = '1-|RC|') +
-  geom_segment( aes(x = Mean_logACD.x, y = mean), data = RC_all_summary, x=0.8, xend = 2.6, y = -0.19, yend = -0.19, lineend = 'round', linejoin = 'round', size = 1.1, linetype = 'solid',colour = 'black',arrow = arrow()) + 
-  annotate('text', x = 1.6, y = -0.21, label = "Decreasing logging intensity", colour = 'black', size = 5.5) + 
+  labs(x = expression('log'[10]~'(ACD)'),y = 'MST') +
+  geom_segment( aes(x = Mean_logACD.x, y = mean), data = MST_all_summary, x=0.8, xend = 2.6, y = -0.165, yend = -0.165, lineend = 'round', linejoin = 'round', size = 1.1, linetype = 'solid',colour = 'black',arrow = arrow()) + 
+  annotate('text', x = 1.6, y = -0.185, label = "Decreasing logging intensity", colour = 'black', size = 5.5) + 
   
   theme_classic() +
   theme( axis.text=element_text(size=21, colour = 'black'),  
          axis.title=element_text(size=21),
-         legend.position = c(0.51, 0.15),
+         legend.position = c(0.51, 0.9),
          legend.margin = margin(0, 0, 0, 0),
          legend.text = element_text(size = 16),
          legend.title = element_blank(),
@@ -231,7 +308,7 @@ RC_betareg_graph<-ggplot() +
   
   guides(colour = guide_legend(nrow = 4))+
   coord_cartesian(ylim = c(0, 1), xlim = c(0.9, 2.6), clip = "off") 
-RC_betareg_graph
+MST_betareg_graph
 
 #### NTP -----------------------------------------------------------------------
 
@@ -250,7 +327,7 @@ NTP_spiders_summary$taxa <- 'Spiders'
 NTP_weevils_summary$taxa <- 'Weevils'
 
 NTP_all_summary <- rbind(NTP_ants_summary, NTP_moths_summary, NTP_orthoptera_summary, NTP_rove_beetles_summary, 
-                        NTP_spiders_summary, NTP_weevils_summary)
+                         NTP_spiders_summary, NTP_weevils_summary)
 
 ##### Summary stats #####
 
@@ -280,16 +357,58 @@ boxplot(mean ~ taxa, data = NTP_all_summary, xlab = "Taxa", ylab = "NTP", cex.la
 
 NTP_all_summary %>% group_by(taxa) %>% summarise(mean = mean(mean))
 
-###### Betareg #####
-betareg_NTP <- betareg::betareg(mean~Mean_logACD * taxa , data = NTP_all_summary)
-summary(betareg_NTP)
 
-betareg_NTP_all <- betareg::betareg(mean~Mean_logACD, data = NTP_all_summary)
+
+
+##### Betareg #####
+library(betareg)
+
+betareg_NTP_all <- betareg::betareg(mean~Mean_logACD  , data = NTP_all_summary)
 summary(betareg_NTP_all)
+confint(betareg_NTP_all)
 
+betareg_NTP_taxa <- betareg::betareg(mean~Mean_logACD * taxa  , data = NTP_all_summary)
+summary(betareg_NTP_taxa)
+confint(betareg_NTP_taxa)
+
+
+NTP_coefs <- coef(betareg_NTP_taxa)
+NTP_confints <- confint(betareg_NTP_taxa)
+
+NTP_slope_ants <- NTP_coefs[2]
+NTP_slope_moths <- NTP_coefs[2] + NTP_coefs[8]
+NTP_slope_orthoptera <- NTP_coefs[2] + NTP_coefs[9]
+NTP_slope_rove_beetles <- NTP_coefs[2] + NTP_coefs[10]
+NTP_slope_spiders <- NTP_coefs[2] + NTP_coefs[11]
+NTP_slope_weevils <- NTP_coefs[2] + NTP_coefs[12]
+
+NTP_lci_ants <- NTP_confints[2,1]
+NTP_lci_moths <- NTP_confints[2,1] + NTP_confints[8,1]
+NTP_lci_orthoptera <- NTP_confints[2,1] + NTP_confints[9,1]
+NTP_lci_rove_beetles <- NTP_confints[2,1] + NTP_confints[10,1]
+NTP_lci_spiders <- NTP_confints[2,1] + NTP_confints[11,1]
+NTP_lci_weevils <- NTP_confints[2,1] + NTP_confints[12,1]
+
+NTP_uci_ants <- NTP_confints[2,2]
+NTP_uci_moths <- NTP_confints[2,2] + NTP_confints[8,2]
+NTP_uci_orthoptera <- NTP_confints[2,2] + NTP_confints[9,2]
+NTP_uci_rove_beetles <- NTP_confints[2,2] + NTP_confints[10,2]
+NTP_uci_spiders <- NTP_confints[2,2] + NTP_confints[11,2]
+NTP_uci_weevils <- NTP_confints[2,2] + NTP_confints[12,2]
+
+NTP_betareg_taxa_results <-  data.frame(taxon = c('Ants', 'Moths', 'Orthoptera', 'Rove beetles','Spiders', 'Weevils'), 
+                                        slope = c(NTP_slope_ants, NTP_slope_moths, NTP_slope_orthoptera, NTP_slope_rove_beetles,  NTP_slope_spiders, NTP_slope_weevils),
+                                        lci = c(NTP_lci_ants, NTP_lci_moths, NTP_lci_orthoptera, NTP_lci_rove_beetles,  NTP_lci_spiders, NTP_lci_weevils),
+                                        uci = c(NTP_uci_ants, NTP_uci_moths, NTP_uci_orthoptera, NTP_uci_rove_beetles, NTP_uci_spiders, NTP_uci_weevils))
+
+
+### plot
 colours_without_scarabs <-  c('#a6cee3',  '#FB9A99', '#CAB2D6', '#1F78B4',   '#E31A1C', '#6A3D9A')
 shapes_without_scarabs <-  c(16, 17, 15, 16, 17, 15)
 linetypes_without_scarabs <- c('longdash', 'dotted', 'dotdash', 'longdash', 'dotted', 'dotdash')
+
+
+### plot 
 
 NTP_betareg_graph <- ggplot() +
   geom_point(data = NTP_all_summary, aes(x = Mean_logACD, y = mean, colour = taxa, shape = taxa), size = 2.9, stroke = 1.058) + 
@@ -298,11 +417,12 @@ NTP_betareg_graph <- ggplot() +
   scale_shape_manual(values = shapes_without_scarabs) +
   scale_linetype_manual(values = linetypes_without_scarabs) +
   
-  # individual groups of taxa
-  geom_line(data = NTP_all_summary, aes(x = Mean_logACD, y = predict(betareg_NTP), colour = taxa, linetype = taxa), size = 0.8)  +
-  
+
   # all
   geom_line(data = NTP_all_summary, aes(x = Mean_logACD,  y =predict(betareg_NTP_all)), linetype = 'dotted', colour = 'black', size = 2) +  
+  
+  # by taxa
+  geom_line(data = NTP_all_summary, aes(x = Mean_logACD,  y =predict(betareg_NTP_taxa), colour = taxa, linetype = taxa),  size = 0.8) +  
   
   # add point for overall weighted mean
   geom_point(aes(x = 2.5, y = weighted_mean_NTP[1]), size = 5)+
@@ -314,16 +434,15 @@ NTP_betareg_graph <- ggplot() +
          legend.position = 'null', 
          plot.margin = margin(0.7,0.7,0.7,0.7, 'cm')) +
   labs(x = '', y = 'NTP') 
-  
+
 NTP_betareg_graph
 
 
 #### Plot together -------------------------------------------------------------
-library(grid)
+
 library(cowplot)
 
-All_betareg_graph<- plot_grid(NST_betareg_graph, RC_betareg_graph, NTP_betareg_graph, nrow = 1,
-                                    ncol = 3, align = 'vh', axis = 'l', labels = c('A', 'B', 'C'), 
-                                    label_x = 0.25, label_size = 20)
+All_betareg_graph<- plot_grid(NST_betareg_graph, MST_betareg_graph, NTP_betareg_graph, nrow = 1,
+                              ncol = 3, align = 'vh', axis = 'l', labels = c('A', 'B', 'C'), 
+                              label_x = 0.25, label_size = 20)
 All_betareg_graph 
-
