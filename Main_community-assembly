@@ -146,80 +146,79 @@ NST_weevils_summary
 
 write.csv(NST_weevils_summary, file = "Results/NST_weevils_summary.csv")
 
-##### RC - Raup-Crick #####
+##### MST - Modified stochasticity ratio #####
 
-RC_weevils <- NST_weevils$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+MST_weevils_summary <- subset(NST_weevils$index.grp, select = c(group, MST.i.ruzicka))
 
-names(RC_weevils)[names(RC_weevils) == "name2"] <- "block_num"
+MST_weevils_summary <- MST_weevils_summary %>% split(MST_weevils_summary$group) # Split so you can separately index each sampling block
 
-RC_weevils <- separate(RC_weevils, block_num, into = c("block", "num"))
-RC_weevils$RC.ruzicka <- as.numeric(RC_weevils$RC.ruzicka)
 
-# TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
-RC_weevils$RC.ruzicka <- abs(RC_weevils$RC.ruzicka)
+MST_weevils_boot <- NST_weevils_boot
 
-# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
-RC_weevils <- RC_weevils %>% mutate(one_minus_RC = 1 - RC.ruzicka)
-# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
-names(RC_weevils)[names(RC_weevils) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
-names(RC_weevils)[names(RC_weevils) == "one_minus_RC"] <- "RC.ruzicka"
 
-## Calculate 95% quantiles by bootstrapping
-RC_weevils <- RC_weevils %>% select('block', 'RC.ruzicka') # Just need RC and block name
+MST_weevils_A <- c('A', MST_weevils_summary$'A'$MST.i.ruzicka, 
+                   quantile(MST_weevils_boot$detail$MST.boot$'A', probs = 0.025), 
+                   quantile(MST_weevils_boot$detail$MST.boot$'A', probs = 0.975))
+MST_weevils_B <- c('B', MST_weevils_summary$'B'$MST.i.ruzicka, 
+                   quantile(MST_weevils_boot$detail$MST.boot$'B', probs = 0.025), 
+                   quantile(MST_weevils_boot$detail$MST.boot$'B', probs = 0.975))
+MST_weevils_C <- c('C', MST_weevils_summary$'C'$MST.i.ruzicka, 
+                   quantile(MST_weevils_boot$detail$MST.boot$'C', probs = 0.025), 
+                   quantile(MST_weevils_boot$detail$MST.boot$'C', probs = 0.975))
+MST_weevils_D <- c('D', MST_weevils_summary$'D'$MST.i.ruzicka, 
+                   quantile(MST_weevils_boot$detail$MST.boot$'D', probs = 0.025), 
+                   quantile(MST_weevils_boot$detail$MST.boot$'D', probs = 0.975))
+MST_weevils_E <- c('E', MST_weevils_summary$'E'$MST.i.ruzicka, 
+                   quantile(MST_weevils_boot$detail$MST.boot$'E', probs = 0.025), 
+                   quantile(MST_weevils_boot$detail$MST.boot$'E', probs = 0.975))
+MST_weevils_F <- c('F', MST_weevils_summary$'F'$MST.i.ruzicka, 
+                   quantile(MST_weevils_boot$detail$MST.boot$'F', probs = 0.025), 
+                   quantile(MST_weevils_boot$detail$MST.boot$'F', probs = 0.975))
+MST_weevils_LF1 <- c('LF1', MST_weevils_summary$'LF1'$MST.i.ruzicka, 
+                     quantile(MST_weevils_boot$detail$MST.boot$'LF1', probs = 0.025), 
+                     quantile(MST_weevils_boot$detail$MST.boot$'LF1', probs = 0.975))
+MST_weevils_LF2 <- c('LF2', MST_weevils_summary$'LF2'$MST.i.ruzicka, 
+                     quantile(MST_weevils_boot$detail$MST.boot$'LF2', probs = 0.025), 
+                     quantile(MST_weevils_boot$detail$MST.boot$'LF2', probs = 0.975))
+MST_weevils_LF3 <- c('LF3', MST_weevils_summary$'LF3'$MST.i.ruzicka, 
+                     quantile(MST_weevils_boot$detail$MST.boot$'LF3', probs = 0.025), 
+                     quantile(MST_weevils_boot$detail$MST.boot$'LF3', probs = 0.975))
+MST_weevils_LFE <- c('LFE', MST_weevils_summary$'LFE'$MST.i.ruzicka, 
+                     quantile(MST_weevils_boot$detail$MST.boot$'LFE', probs = 0.025), 
+                     quantile(MST_weevils_boot$detail$MST.boot$'LFE', probs = 0.975))
+MST_weevils_VJR <- c('VJR', MST_weevils_summary$'VJR'$MST.i.ruzicka, 
+                     quantile(MST_weevils_boot$detail$MST.boot$'VJR', probs = 0.025), 
+                     quantile(MST_weevils_boot$detail$MST.boot$'VJR', probs = 0.975))
+MST_weevils_OG1 <- c('OG1', MST_weevils_summary$'OG1'$MST.i.ruzicka, 
+                     quantile(MST_weevils_boot$detail$MST.boot$'OG1', probs = 0.025), 
+                     quantile(MST_weevils_boot$detail$MST.boot$'OG1', probs = 0.975))
+MST_weevils_OG2 <- c('OG2', MST_weevils_summary$'OG2'$MST.i.ruzicka, 
+                     quantile(MST_weevils_boot$detail$MST.boot$'OG2', probs = 0.025), 
+                     quantile(MST_weevils_boot$detail$MST.boot$'OG2', probs = 0.975))
+MST_weevils_OG3 <- c('OG3', MST_weevils_summary$'OG3'$MST.i.ruzicka, 
+                     quantile(MST_weevils_boot$detail$MST.boot$'OG3', probs = 0.025), 
+                     quantile(MST_weevils_boot$detail$MST.boot$'OG3', probs = 0.975))
 
-RC_weevils <- RC_weevils %>% split( RC_weevils$block) # Split so you can separately index each sampling block
+MST_weevils_summary <- as.data.frame(rbind(MST_weevils_A, MST_weevils_B, MST_weevils_C, MST_weevils_D,
+                                           MST_weevils_E, MST_weevils_F, MST_weevils_LF1, MST_weevils_LF2, 
+                                           MST_weevils_LF3, MST_weevils_LFE, MST_weevils_VJR, MST_weevils_OG1,
+                                           MST_weevils_OG2, MST_weevils_OG3))
 
-# Function for bootstrapping
-nboot <- 1000
-bootstrap <- function(data){ # Data is one sampling block 
-  for (i in 1:nboot) {
-    boot_sample <-sample(data, replace = TRUE)
-    boot_lci <- quantile(boot_sample, probs = 0.025)
-    boot_uci <- quantile(boot_sample, probs = 0.975)
-    return(c(boot_lci, boot_uci))
-    
-  }
-}
+colnames(MST_weevils_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(MST_weevils_summary) = 1:14
 
-## Calculate mean and bootstrapped CIs for each sampling block
-RC_weevils_summary_A <- c('A', mean(RC_weevils$A$RC.ruzicka), bootstrap(RC_weevils$A$RC.ruzicka))
-RC_weevils_summary_B <- c('B', mean(RC_weevils$B$RC.ruzicka), bootstrap(RC_weevils$B$RC.ruzicka))
-RC_weevils_summary_C <- c('C', mean(RC_weevils$C$RC.ruzicka), bootstrap(RC_weevils$C$RC.ruzicka))
-RC_weevils_summary_D <- c('D', mean(RC_weevils$D$RC.ruzicka), bootstrap(RC_weevils$D$RC.ruzicka))
-RC_weevils_summary_E <- c('E', mean(RC_weevils$E$RC.ruzicka), bootstrap(RC_weevils$E$RC.ruzicka))
-RC_weevils_summary_F <- c('F', mean(RC_weevils$F$RC.ruzicka), bootstrap(RC_weevils$F$RC.ruzicka))
-RC_weevils_summary_LF1 <- c('LF1', mean(RC_weevils$LF1$RC.ruzicka), bootstrap(RC_weevils$LF1$RC.ruzicka))
-RC_weevils_summary_LF2 <- c('LF2', mean(RC_weevils$LF2$RC.ruzicka), bootstrap(RC_weevils$LF2$RC.ruzicka))
-RC_weevils_summary_LF3 <- c('LF3', mean(RC_weevils$LF3$RC.ruzicka), bootstrap(RC_weevils$LF3$RC.ruzicka))
-RC_weevils_summary_LFE <- c('LFE', mean(RC_weevils$LFE$RC.ruzicka), bootstrap(RC_weevils$LFE$RC.ruzicka))
-RC_weevils_summary_VJR <- c('VJR', mean(RC_weevils$VJR$RC.ruzicka), bootstrap(RC_weevils$VJR$RC.ruzicka))
-RC_weevils_summary_OG1 <- c('OG1', mean(RC_weevils$OG1$RC.ruzicka), bootstrap(RC_weevils$OG1$RC.ruzicka))
-RC_weevils_summary_OG2 <- c('OG2', mean(RC_weevils$OG2$RC.ruzicka), bootstrap(RC_weevils$OG2$RC.ruzicka))
-RC_weevils_summary_OG3 <- c('OG3', mean(RC_weevils$OG3$RC.ruzicka), bootstrap(RC_weevils$OG3$RC.ruzicka))
+MST_weevils_summary$mean <- as.numeric(MST_weevils_summary$mean)
+MST_weevils_summary$lower.95.quant <- as.numeric(MST_weevils_summary$lower.95.quant)
+MST_weevils_summary$upper.95.quant <- as.numeric(MST_weevils_summary$upper.95.quant)
 
-## Combine these all into a dataframe
-RC_weevils_summary <- as.data.frame(rbind(RC_weevils_summary_A, RC_weevils_summary_B, RC_weevils_summary_C, RC_weevils_summary_D, 
-                                          RC_weevils_summary_E, RC_weevils_summary_F, RC_weevils_summary_LF1, RC_weevils_summary_LF2, RC_weevils_summary_LF3,
-                                          RC_weevils_summary_LFE, RC_weevils_summary_VJR, RC_weevils_summary_OG1, RC_weevils_summary_OG2, RC_weevils_summary_OG3))
+MST_weevils_summary <- left_join(MST_weevils_summary, ACD_weevils_summary, by = "block")
 
-RC_weevils_summary
+MST_weevils_summary$range <- MST_weevils_summary$upper.95.quant - MST_weevils_summary$lower.95.quant
 
-# Rename column and row headings
-colnames(RC_weevils_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
-rownames(RC_weevils_summary) = 1:14
+MST_weevils_summary 
 
-# Add mean ACD
-RC_weevils_summary <- left_join(RC_weevils_summary, ACD_weevils_summary, by = "block")
+write.csv(MST_weevils_summary, file = "Results/MST_weevils_summary.csv")
 
-RC_weevils_summary$mean <- as.numeric(RC_weevils_summary$mean)
-RC_weevils_summary$lower.95.quant <- as.numeric(RC_weevils_summary$lower.95.quant)
-RC_weevils_summary$upper.95.quant <- as.numeric(RC_weevils_summary$upper.95.quant)
-
-RC_weevils_summary$range <- RC_weevils_summary$upper.95.quant - RC_weevils_summary$lower.95.quant
-
-mean(RC_weevils_summary$mean)
-
-write.csv(RC_weevils_summary, file = "Results/RC_weevils_summary.csv")
 
 ##### NTP - Neutral taxa percentage #####
 weevils_composition_matrix <- as.data.frame(weevils_composition_matrix)
@@ -516,82 +515,80 @@ mean(NST_rove_beetles_summary $ mean)
 
 write.csv(NST_rove_beetles_summary, file = "Results/NST_rove_beetles_summary.csv")
 
+##### MST - Modified stochasticity ratio #####
 
-##### RC - Raup-Crick #####
-RC_rove_beetles <- NST_rove_beetles$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
-names(RC_rove_beetles)[names(RC_rove_beetles) == "name2"] <- "block_num"
+MST_rove_beetles_summary <- subset(NST_rove_beetles$index.grp, select = c(group, MST.i.ruzicka))
 
-RC_rove_beetles <- separate(RC_rove_beetles, block_num, into = c("block", "num"))
-RC_rove_beetles$RC.ruzicka <- as.numeric(RC_rove_beetles$RC.ruzicka)
+MST_rove_beetles_summary <- MST_rove_beetles_summary %>% split(MST_rove_beetles_summary$group) # Split so you can separately index each sampling block
 
-# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
-RC_rove_beetles$RC.ruzicka <- abs(RC_rove_beetles$RC.ruzicka)
-
-# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
-RC_rove_beetles <- RC_rove_beetles %>% mutate(one_minus_RC = 1 - RC.ruzicka)
-# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
-names(RC_rove_beetles)[names(RC_rove_beetles) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
-names(RC_rove_beetles)[names(RC_rove_beetles) == "one_minus_RC"] <- "RC.ruzicka"
-
-str(RC_rove_beetles)
-
-## Calculate 95% quantiles by bootstrapping
-RC_rove_beetles <- RC_rove_beetles %>% select('block', 'RC.ruzicka') # Just need RC and block name
-
-RC_rove_beetles <- RC_rove_beetles %>% split( RC_rove_beetles$block) # Split so you can separately index each sampling block
-
-RC_rove_beetles
+MST_rove_beetles_boot <- NST_rove_beetles_boot
 
 
-# Function for bootstrapping
-nboot <- 1000
-bootstrap <- function(data){ # Data is one sampling block 
-  for (i in 1:nboot) {
-    boot_sample <-sample(data, replace = TRUE)
-    boot_lci <- quantile(boot_sample, probs = 0.025)
-    boot_uci <- quantile(boot_sample, probs = 0.975)
-    return(c(boot_lci, boot_uci))
-    
-  }
-}
+MST_rove_beetles_A <- c('A', MST_rove_beetles_summary$'A'$MST.i.ruzicka, 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'A', probs = 0.025), 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'A', probs = 0.975))
+MST_rove_beetles_B <- c('B', MST_rove_beetles_summary$'B'$MST.i.ruzicka, 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'B', probs = 0.025), 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'B', probs = 0.975))
+MST_rove_beetles_C <- c('C', MST_rove_beetles_summary$'C'$MST.i.ruzicka, 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'C', probs = 0.025), 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'C', probs = 0.975))
+MST_rove_beetles_D <- c('D', MST_rove_beetles_summary$'D'$MST.i.ruzicka, 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'D', probs = 0.025), 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'D', probs = 0.975))
+MST_rove_beetles_E <- c('E', MST_rove_beetles_summary$'E'$MST.i.ruzicka, 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'E', probs = 0.025), 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'E', probs = 0.975))
+MST_rove_beetles_F <- c('F', MST_rove_beetles_summary$'F'$MST.i.ruzicka, 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'F', probs = 0.025), 
+                        quantile(MST_rove_beetles_boot$detail$MST.boot$'F', probs = 0.975))
+MST_rove_beetles_LF1 <- c('LF1', MST_rove_beetles_summary$'LF1'$MST.i.ruzicka, 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'LF1', probs = 0.025), 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'LF1', probs = 0.975))
+MST_rove_beetles_LF2 <- c('LF2', MST_rove_beetles_summary$'LF2'$MST.i.ruzicka, 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'LF2', probs = 0.025), 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'LF2', probs = 0.975))
+MST_rove_beetles_LF3 <- c('LF3', MST_rove_beetles_summary$'LF3'$MST.i.ruzicka, 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'LF3', probs = 0.025), 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'LF3', probs = 0.975))
+MST_rove_beetles_LFE <- c('LFE', MST_rove_beetles_summary$'LFE'$MST.i.ruzicka, 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'LFE', probs = 0.025), 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'LFE', probs = 0.975))
+MST_rove_beetles_VJR <- c('VJR', MST_rove_beetles_summary$'VJR'$MST.i.ruzicka, 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'VJR', probs = 0.025), 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'VJR', probs = 0.975))
+MST_rove_beetles_OG1 <- c('OG1', MST_rove_beetles_summary$'OG1'$MST.i.ruzicka, 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'OG1', probs = 0.025), 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'OG1', probs = 0.975))
+MST_rove_beetles_OG2 <- c('OG2', MST_rove_beetles_summary$'OG2'$MST.i.ruzicka, 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'OG2', probs = 0.025), 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'OG2', probs = 0.975))
+MST_rove_beetles_OG3 <- c('OG3', MST_rove_beetles_summary$'OG3'$MST.i.ruzicka, 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'OG3', probs = 0.025), 
+                          quantile(MST_rove_beetles_boot$detail$MST.boot$'OG3', probs = 0.975))
 
-## Calculate mean and bootstrapped CIs for each sampling block
-RC_rove_beetles_summary_A <- c('A', mean(RC_rove_beetles$A$RC.ruzicka), bootstrap(RC_rove_beetles$A$RC.ruzicka))
-RC_rove_beetles_summary_B <- c('B', mean(RC_rove_beetles$B$RC.ruzicka), bootstrap(RC_rove_beetles$B$RC.ruzicka))
-RC_rove_beetles_summary_C <- c('C', mean(RC_rove_beetles$C$RC.ruzicka), bootstrap(RC_rove_beetles$C$RC.ruzicka))
-RC_rove_beetles_summary_D <- c('D', mean(RC_rove_beetles$D$RC.ruzicka), bootstrap(RC_rove_beetles$D$RC.ruzicka))
-RC_rove_beetles_summary_E <- c('E', mean(RC_rove_beetles$E$RC.ruzicka), bootstrap(RC_rove_beetles$E$RC.ruzicka))
-RC_rove_beetles_summary_F <- c('F', mean(RC_rove_beetles$F$RC.ruzicka), bootstrap(RC_rove_beetles$F$RC.ruzicka))
-RC_rove_beetles_summary_LF1 <- c('LF1', mean(RC_rove_beetles$LF1$RC.ruzicka), bootstrap(RC_rove_beetles$LF1$RC.ruzicka))
-RC_rove_beetles_summary_LF2 <- c('LF2', mean(RC_rove_beetles$LF2$RC.ruzicka), bootstrap(RC_rove_beetles$LF2$RC.ruzicka))
-RC_rove_beetles_summary_LF3 <- c('LF3', mean(RC_rove_beetles$LF3$RC.ruzicka), bootstrap(RC_rove_beetles$LF3$RC.ruzicka))
-RC_rove_beetles_summary_LFE <- c('LFE', mean(RC_rove_beetles$LFE$RC.ruzicka), bootstrap(RC_rove_beetles$LFE$RC.ruzicka))
-RC_rove_beetles_summary_VJR <- c('VJR', mean(RC_rove_beetles$VJR$RC.ruzicka), bootstrap(RC_rove_beetles$VJR$RC.ruzicka))
-RC_rove_beetles_summary_OG1 <- c('OG1', mean(RC_rove_beetles$OG1$RC.ruzicka), bootstrap(RC_rove_beetles$OG1$RC.ruzicka))
-RC_rove_beetles_summary_OG2 <- c('OG2', mean(RC_rove_beetles$OG2$RC.ruzicka), bootstrap(RC_rove_beetles$OG2$RC.ruzicka))
-RC_rove_beetles_summary_OG3 <- c('OG3', mean(RC_rove_beetles$OG3$RC.ruzicka), bootstrap(RC_rove_beetles$OG3$RC.ruzicka))
+MST_rove_beetles_summary <- as.data.frame(rbind(MST_rove_beetles_A, MST_rove_beetles_B, MST_rove_beetles_C, MST_rove_beetles_D,
+                                                MST_rove_beetles_E, MST_rove_beetles_F, MST_rove_beetles_LF1, MST_rove_beetles_LF2, 
+                                                MST_rove_beetles_LF3, MST_rove_beetles_LFE, MST_rove_beetles_VJR, MST_rove_beetles_OG1,
+                                                MST_rove_beetles_OG2, MST_rove_beetles_OG3))
+MST_rove_beetles_summary 
 
-## Combine these all into a dataframe
-RC_rove_beetles_summary <- as.data.frame(rbind(RC_rove_beetles_summary_A, RC_rove_beetles_summary_B, RC_rove_beetles_summary_C, RC_rove_beetles_summary_D, 
-                                               RC_rove_beetles_summary_E, RC_rove_beetles_summary_F, RC_rove_beetles_summary_LF1, RC_rove_beetles_summary_LF2, RC_rove_beetles_summary_LF3,
-                                               RC_rove_beetles_summary_LFE, RC_rove_beetles_summary_VJR, RC_rove_beetles_summary_OG1, RC_rove_beetles_summary_OG2, RC_rove_beetles_summary_OG3))
+colnames(MST_rove_beetles_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(MST_rove_beetles_summary) = 1:14
 
-RC_rove_beetles_summary
 
-# Rename column and row headings
-colnames(RC_rove_beetles_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
-rownames(RC_rove_beetles_summary) = 1:14
+MST_rove_beetles_summary$mean <- as.numeric(MST_rove_beetles_summary$mean)
+MST_rove_beetles_summary$lower.95.quant <- as.numeric(MST_rove_beetles_summary$lower.95.quant)
+MST_rove_beetles_summary$upper.95.quant <- as.numeric(MST_rove_beetles_summary$upper.95.quant)
 
-# Add mean ACD
-RC_rove_beetles_summary <- left_join(RC_rove_beetles_summary, ACD_rove_beetles_summary, by = "block")
+MST_rove_beetles_summary <- left_join(MST_rove_beetles_summary, ACD_rove_beetles_summary, by = "block")
 
-RC_rove_beetles_summary$mean <- as.numeric(RC_rove_beetles_summary$mean)
-RC_rove_beetles_summary$lower.95.quant <- as.numeric(RC_rove_beetles_summary$lower.95.quant)
-RC_rove_beetles_summary$upper.95.quant <- as.numeric(RC_rove_beetles_summary$upper.95.quant)
+MST_rove_beetles_summary$range <- MST_rove_beetles_summary$upper.95.quant - MST_rove_beetles_summary$lower.95.quant
 
-RC_rove_beetles_summary$range <- RC_rove_beetles_summary$upper.95.quant - RC_rove_beetles_summary$lower.95.quant
+mean(MST_rove_beetles_summary $ mean)
 
-write.csv(RC_rove_beetles_summary, file = "Results/RC_rove_beetles_summary.csv")
+write.csv(MST_rove_beetles_summary, file = "Results/MST_rove_beetles_summary.csv")
+
 
 ##### NTP - Neutral taxa percentage #####
 
@@ -906,68 +903,84 @@ NST_scarabs_summary <- subset(NST_scarabs_summary, block != "VJR")
 
 write.csv(NST_scarabs_summary, file = "Results/NST_scarabs_summary.csv")
 
+##### MST - Modified Stochasticity ratio #####
 
-##### RC - Raup-Crick #####
 
-RC_scarabs <- NST_scarabs$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
-names(RC_scarabs)[names(RC_scarabs) == "name2"] <- "block_num"
 
-RC_scarabs <- separate(RC_scarabs, block_num, into = c("block", "num"))
-RC_scarabs$RC.ruzicka <- as.numeric(RC_scarabs$RC.ruzicka)
+MST_scarabs_summary <- subset(NST_scarabs$index.grp, select = c(group, MST.i.ruzicka))
+MST_scarabs_summary <- MST_scarabs_summary %>% split(MST_scarabs_summary$group) # Split so you can separately index each sampling block
 
-# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
-RC_scarabs$RC.ruzicka <- abs(RC_scarabs$RC.ruzicka)
+MST_scarabs_boot <- NST_scarabs_boot
 
-# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
-RC_scarabs <- RC_scarabs %>% mutate(one_minus_RC = 1 - RC.ruzicka)
-# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
-names(RC_scarabs)[names(RC_scarabs) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
-names(RC_scarabs)[names(RC_scarabs) == "one_minus_RC"] <- "RC.ruzicka"
+MST_scarabs_A <- c('A', MST_scarabs_summary$'A'$MST.i.ruzicka, 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'A', probs = 0.025), 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'A', probs = 0.975))
+MST_scarabs_B <- c('B', MST_scarabs_summary$'B'$MST.i.ruzicka, 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'B', probs = 0.025), 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'B', probs = 0.975))
+MST_scarabs_C <- c('C', MST_scarabs_summary$'C'$MST.i.ruzicka, 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'C', probs = 0.025), 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'C', probs = 0.975))
+MST_scarabs_D <- c('D', MST_scarabs_summary$'D'$MST.i.ruzicka, 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'D', probs = 0.025), 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'D', probs = 0.975))
+MST_scarabs_E <- c('E', MST_scarabs_summary$'E'$MST.i.ruzicka, 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'E', probs = 0.025), 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'E', probs = 0.975))
+MST_scarabs_F <- c('F', MST_scarabs_summary$'F'$MST.i.ruzicka, 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'F', probs = 0.025), 
+                   quantile(MST_scarabs_boot$detail$MST.boot$'F', probs = 0.975))
+MST_scarabs_LF1 <- c('LF1', MST_scarabs_summary$'LF1'$MST.i.ruzicka, 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'LF1', probs = 0.025), 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'LF1', probs = 0.975))
+MST_scarabs_LF2 <- c('LF2', MST_scarabs_summary$'LF2'$MST.i.ruzicka, 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'LF2', probs = 0.025), 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'LF2', probs = 0.975))
+MST_scarabs_LF3 <- c('LF3', MST_scarabs_summary$'LF3'$MST.i.ruzicka, 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'LF3', probs = 0.025), 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'LF3', probs = 0.975))
+MST_scarabs_LFE <- c('LFE', MST_scarabs_summary$'LFE'$MST.i.ruzicka, 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'LFE', probs = 0.025), 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'LFE', probs = 0.975))
+MST_scarabs_VJR <- c('VJR', MST_scarabs_summary$'VJR'$MST.i.ruzicka, 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'VJR', probs = 0.025), 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'VJR', probs = 0.975))
+MST_scarabs_OG1 <- c('OG1', MST_scarabs_summary$'OG1'$MST.i.ruzicka, 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'OG1', probs = 0.025), 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'OG1', probs = 0.975))
+MST_scarabs_OG2 <- c('OG2', MST_scarabs_summary$'OG2'$MST.i.ruzicka, 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'OG2', probs = 0.025), 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'OG2', probs = 0.975))
+MST_scarabs_OG3 <- c('OG3', MST_scarabs_summary$'OG3'$MST.i.ruzicka, 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'OG3', probs = 0.025), 
+                     quantile(MST_scarabs_boot$detail$MST.boot$'OG3', probs = 0.975))
 
-str(RC_scarabs)
+MST_scarabs_summary <- as.data.frame(rbind(MST_scarabs_A, MST_scarabs_B, MST_scarabs_C, MST_scarabs_D,
+                                           MST_scarabs_E, MST_scarabs_F, MST_scarabs_LF1, MST_scarabs_LF2, 
+                                           MST_scarabs_LF3, MST_scarabs_LFE, MST_scarabs_VJR, MST_scarabs_OG1,
+                                           MST_scarabs_OG2, MST_scarabs_OG3))
 
-## Calculate 95% quantiles by bootstrapping
-RC_scarabs <- RC_scarabs %>% select('block', 'RC.ruzicka') # Just need RC and block name
-RC_scarabs <- RC_scarabs %>% split( RC_scarabs$block) # Split so you can separately index each sampling block
+colnames(MST_scarabs_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(MST_scarabs_summary) = 1:14
 
-## Calculate mean and bootstrapped CIs for each sampling block
-RC_scarabs_summary_A <- c('A', mean(RC_scarabs$A$RC.ruzicka), bootstrap(RC_scarabs$A$RC.ruzicka))
-RC_scarabs_summary_B <- c('B', mean(RC_scarabs$B$RC.ruzicka), bootstrap(RC_scarabs$B$RC.ruzicka))
-RC_scarabs_summary_C <- c('C', mean(RC_scarabs$C$RC.ruzicka), bootstrap(RC_scarabs$C$RC.ruzicka))
-RC_scarabs_summary_D <- c('D', mean(RC_scarabs$D$RC.ruzicka), bootstrap(RC_scarabs$D$RC.ruzicka))
-RC_scarabs_summary_E <- c('E', mean(RC_scarabs$E$RC.ruzicka), bootstrap(RC_scarabs$E$RC.ruzicka))
-RC_scarabs_summary_F <- c('F', mean(RC_scarabs$F$RC.ruzicka), bootstrap(RC_scarabs$F$RC.ruzicka))
-RC_scarabs_summary_LF1 <- c('LF1', mean(RC_scarabs$LF1$RC.ruzicka), bootstrap(RC_scarabs$LF1$RC.ruzicka))
-RC_scarabs_summary_LF2 <- c('LF2', mean(RC_scarabs$LF2$RC.ruzicka), bootstrap(RC_scarabs$LF2$RC.ruzicka))
-RC_scarabs_summary_LF3 <- c('LF3', mean(RC_scarabs$LF3$RC.ruzicka), bootstrap(RC_scarabs$LF3$RC.ruzicka))
-RC_scarabs_summary_LFE <- c('LFE', mean(RC_scarabs$LFE$RC.ruzicka), bootstrap(RC_scarabs$LFE$RC.ruzicka))
-RC_scarabs_summary_VJR <- c('VJR', mean(RC_scarabs$VJR$RC.ruzicka), bootstrap(RC_scarabs$VJR$RC.ruzicka))
-RC_scarabs_summary_OG1 <- c('OG1', mean(RC_scarabs$OG1$RC.ruzicka), bootstrap(RC_scarabs$OG1$RC.ruzicka))
-RC_scarabs_summary_OG2 <- c('OG2', mean(RC_scarabs$OG2$RC.ruzicka), bootstrap(RC_scarabs$OG2$RC.ruzicka))
-RC_scarabs_summary_OG3 <- c('OG3', mean(RC_scarabs$OG3$RC.ruzicka), bootstrap(RC_scarabs$OG3$RC.ruzicka))
 
-## Combine these all into a dataframe
-RC_scarabs_summary <- as.data.frame(rbind(RC_scarabs_summary_A, RC_scarabs_summary_B, RC_scarabs_summary_C, RC_scarabs_summary_D, 
-                                          RC_scarabs_summary_E, RC_scarabs_summary_F, RC_scarabs_summary_LF1, RC_scarabs_summary_LF2, RC_scarabs_summary_LF3,
-                                          RC_scarabs_summary_LFE, RC_scarabs_summary_VJR, RC_scarabs_summary_OG1, RC_scarabs_summary_OG2, RC_scarabs_summary_OG3))
+MST_scarabs_summary$mean <- as.numeric(MST_scarabs_summary$mean)
+MST_scarabs_summary$lower.95.quant <- as.numeric(MST_scarabs_summary$lower.95.quant)
+MST_scarabs_summary$upper.95.quant <- as.numeric(MST_scarabs_summary$upper.95.quant)
 
-RC_scarabs_summary
+MST_scarabs_summary <- left_join(MST_scarabs_summary, ACD_scarabs_summary, by = "block")
 
-# Rename column and row headings
-colnames(RC_scarabs_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
-rownames(RC_scarabs_summary) = 1:14
+MST_scarabs_summary$range <- MST_scarabs_summary$upper.95.quant - MST_scarabs_summary$lower.95.quant
 
-# Add mean ACD
-RC_scarabs_summary <- left_join(RC_scarabs_summary, ACD_scarabs_summary, by = "block")
+mean(MST_scarabs_summary$mean)
 
-RC_scarabs_summary$mean <- as.numeric(RC_scarabs_summary$mean)
-RC_scarabs_summary$lower.95.quant <- as.numeric(RC_scarabs_summary$lower.95.quant)
-RC_scarabs_summary$upper.95.quant <- as.numeric(RC_scarabs_summary$upper.95.quant)
-RC_scarabs_summary$range <- RC_scarabs_summary$upper.95.quant - RC_scarabs_summary$lower.95.quant
+#REMOVE VJR has NST = 0
+MST_scarabs_summary <- subset(MST_scarabs_summary, block != "VJR")
 
-mean(RC_scarabs_summary$mean)
 
-write.csv(RC_scarabs_summary, file = "Results/RC_scarabs_summary.csv")
+
+write.csv(MST_scarabs_summary, file = "Results/MST_scarabs_summary.csv")
+
 
 
 ##### iCAMP - inferring community assembly mechanisms by phylogenetic bin-based null model analysis #####
@@ -1183,68 +1196,75 @@ mean(NST_ants_summary$mean)
 
 write.csv(NST_ants_summary, file = "NST_ants_summary.csv")
 
-##### RC - Raup-Crick #####
 
-RC_ants <- NST_ants$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+##### MST - Modified stochasticity ratio #####
 
-names(RC_ants)[names(RC_ants) == "name2"] <- "block_num"
+MST_ants_summary <- subset(NST_ants$index.grp, select = c(group, MST.i.ruzicka))
 
-RC_ants <- separate(RC_ants, block_num, into = c("block", "num"))
-RC_ants$RC.ruzicka <- as.numeric(RC_ants$RC.ruzicka)
-RC_ants <- as.data.frame(RC_ants)
+MST_ants_summary <- MST_ants_summary %>% split(MST_ants_summary$group) # Split so you can separately index each sampling block
 
-# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
-RC_ants$RC.ruzicka <- abs(RC_ants$RC.ruzicka)
+MST_ants_boot <- NST_ants_boot
 
-# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
-RC_ants <- RC_ants %>% mutate(one_minus_RC = 1 - RC.ruzicka)
-# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
-names(RC_ants)[names(RC_ants) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
-names(RC_ants)[names(RC_ants) == "one_minus_RC"] <- "RC.ruzicka"
+MST_ants_A <- c('A', MST_ants_summary$'A'$MST.i.ruzicka, 
+                quantile(MST_ants_boot$detail$MST.boot$'A', probs = 0.025), 
+                quantile(MST_ants_boot$detail$MST.boot$'A', probs = 0.975))
+MST_ants_B <- c('B', MST_ants_summary$'B'$MST.i.ruzicka, 
+                quantile(MST_ants_boot$detail$MST.boot$'B', probs = 0.025), 
+                quantile(MST_ants_boot$detail$MST.boot$'B', probs = 0.975))
+MST_ants_C <- c('C', MST_ants_summary$'C'$MST.i.ruzicka, 
+                quantile(MST_ants_boot$detail$MST.boot$'C', probs = 0.025), 
+                quantile(MST_ants_boot$detail$MST.boot$'C', probs = 0.975))
+MST_ants_D <- c('D', MST_ants_summary$'D'$MST.i.ruzicka, 
+                quantile(MST_ants_boot$detail$MST.boot$'D', probs = 0.025), 
+                quantile(MST_ants_boot$detail$MST.boot$'D', probs = 0.975))
+MST_ants_E <- c('E', MST_ants_summary$'E'$MST.i.ruzicka, 
+                quantile(MST_ants_boot$detail$MST.boot$'E', probs = 0.025), 
+                quantile(MST_ants_boot$detail$MST.boot$'E', probs = 0.975))
+MST_ants_F <- c('F', MST_ants_summary$'F'$MST.i.ruzicka, 
+                quantile(MST_ants_boot$detail$MST.boot$'F', probs = 0.025), 
+                quantile(MST_ants_boot$detail$MST.boot$'F', probs = 0.975))
+MST_ants_LF2 <- c('LF2', MST_ants_summary$'LF2'$MST.i.ruzicka, 
+                  quantile(MST_ants_boot$detail$MST.boot$'LF2', probs = 0.025), 
+                  quantile(MST_ants_boot$detail$MST.boot$'LF2', probs = 0.975))
+MST_ants_LF3 <- c('LF3', MST_ants_summary$'LF3'$MST.i.ruzicka, 
+                  quantile(MST_ants_boot$detail$MST.boot$'LF3', probs = 0.025), 
+                  quantile(MST_ants_boot$detail$MST.boot$'LF3', probs = 0.975))
+MST_ants_LFE <- c('LFE', MST_ants_summary$'LFE'$MST.i.ruzicka, 
+                  quantile(MST_ants_boot$detail$MST.boot$'LFE', probs = 0.025), 
+                  quantile(MST_ants_boot$detail$MST.boot$'LFE', probs = 0.975))
+MST_ants_VJR <- c('VJR', MST_ants_summary$'VJR'$MST.i.ruzicka, 
+                  quantile(MST_ants_boot$detail$MST.boot$'VJR', probs = 0.025), 
+                  quantile(MST_ants_boot$detail$MST.boot$'VJR', probs = 0.975))
+MST_ants_OG2 <- c('OG2', MST_ants_summary$'OG2'$MST.i.ruzicka, 
+                  quantile(MST_ants_boot$detail$MST.boot$'OG2', probs = 0.025), 
+                  quantile(MST_ants_boot$detail$MST.boot$'OG2', probs = 0.975))
+MST_ants_OG3 <- c('OG3', MST_ants_summary$'OG3'$MST.i.ruzicka, 
+                  quantile(MST_ants_boot$detail$MST.boot$'OG3', probs = 0.025), 
+                  quantile(MST_ants_boot$detail$MST.boot$'OG3', probs = 0.975))
 
-## Calculate 95% quantiles by bootstrapping
-RC_ants <- RC_ants %>% select('block', 'RC.ruzicka') # Just need RC and block name
 
-RC_ants <- RC_ants %>% split( RC_ants$block) # Split so you can separately index each sampling block
+MST_ants_summary <- as.data.frame(rbind(MST_ants_A, MST_ants_B, MST_ants_C, MST_ants_D,
+                                        MST_ants_E, MST_ants_F, MST_ants_LF2, 
+                                        MST_ants_LF3, MST_ants_LFE, MST_ants_VJR, 
+                                        MST_ants_OG2, MST_ants_OG3))
 
-## Calculate mean and bootstrapped CIs for each sampling block
-RC_ants_summary_A <- c('A', mean(RC_ants$A$RC.ruzicka), bootstrap(RC_ants$A$RC.ruzicka))
-RC_ants_summary_B <- c('B', mean(RC_ants$B$RC.ruzicka), bootstrap(RC_ants$B$RC.ruzicka))
-RC_ants_summary_C <- c('C', mean(RC_ants$C$RC.ruzicka), bootstrap(RC_ants$C$RC.ruzicka))
-RC_ants_summary_D <- c('D', mean(RC_ants$D$RC.ruzicka), bootstrap(RC_ants$D$RC.ruzicka))
-RC_ants_summary_E <- c('E', mean(RC_ants$E$RC.ruzicka), bootstrap(RC_ants$E$RC.ruzicka))
-RC_ants_summary_F <- c('F', mean(RC_ants$F$RC.ruzicka), bootstrap(RC_ants$F$RC.ruzicka))
-RC_ants_summary_LF2 <- c('LF2', mean(RC_ants$LF2$RC.ruzicka), bootstrap(RC_ants$LF2$RC.ruzicka))
-RC_ants_summary_LF3 <- c('LF3', mean(RC_ants$LF3$RC.ruzicka), bootstrap(RC_ants$LF3$RC.ruzicka))
-RC_ants_summary_LFE <- c('LFE', mean(RC_ants$LFE$RC.ruzicka), bootstrap(RC_ants$LFE$RC.ruzicka))
-RC_ants_summary_VJR <- c('VJR', mean(RC_ants$VJR$RC.ruzicka), bootstrap(RC_ants$VJR$RC.ruzicka))
-RC_ants_summary_OG2 <- c('OG2', mean(RC_ants$OG2$RC.ruzicka), bootstrap(RC_ants$OG2$RC.ruzicka))
-RC_ants_summary_OG3 <- c('OG3', mean(RC_ants$OG3$RC.ruzicka), bootstrap(RC_ants$OG3$RC.ruzicka))
+colnames(MST_ants_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(MST_ants_summary) = 1:12
+
+MST_ants_summary$mean <- as.numeric(MST_ants_summary$mean)
+MST_ants_summary$lower.95.quant <- as.numeric(MST_ants_summary$lower.95.quant)
+MST_ants_summary$upper.95.quant <- as.numeric(MST_ants_summary$upper.95.quant)
+
+MST_ants_summary <- left_join(MST_ants_summary, ACD_ants_summary, by = "block")
+
+MST_ants_summary$range <- MST_ants_summary$upper.95.quant - MST_ants_summary$lower.95.quant
+MST_ants_summary
+
+mean(MST_ants_summary$mean)
+
+write.csv(MST_ants_summary, file = "Results/MST_ants_summary.csv")
 
 
-## Combine these all into a dataframe
-RC_ants_summary <- as.data.frame(rbind(RC_ants_summary_A, RC_ants_summary_B, RC_ants_summary_C, RC_ants_summary_D, 
-                                       RC_ants_summary_E, RC_ants_summary_F,  RC_ants_summary_LF2, RC_ants_summary_LF3,
-                                       RC_ants_summary_LFE, RC_ants_summary_VJR, RC_ants_summary_OG2, RC_ants_summary_OG3))
-
-RC_ants_summary
-
-# Rename column and row headings
-colnames(RC_ants_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
-rownames(RC_ants_summary) = 1:12
-
-# Add mean ACD
-RC_ants_summary <- left_join(RC_ants_summary, ACD_ants_summary, by = "block")
-
-RC_ants_summary$mean <- as.numeric(RC_ants_summary$mean)
-RC_ants_summary$lower.95.quant <- as.numeric(RC_ants_summary$lower.95.quant)
-RC_ants_summary$upper.95.quant <- as.numeric(RC_ants_summary$upper.95.quant)
-
-RC_ants_summary$range <- RC_ants_summary$upper.95.quant - RC_ants_summary$lower.95.quant
-
-mean(RC_ants_summary$mean)
-
-write.csv(RC_ants_summary, file = "Results/RC_ants_summary.csv")
 
 ##### NTP - Neutral taxa percentage #####
 
@@ -1505,55 +1525,51 @@ NST_orthoptera_summary
 
 write.csv(NST_orthoptera_summary, file = "Results/NST_orthoptera_summary.csv")
 
-##### RC - Raup-Crick #####
 
-RC_orthoptera <- NST_orthoptera$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
+MST_orthoptera_summary <- subset(NST_orthoptera$index.grp, select = c(group, MST.i.ruzicka))
+MST_orthoptera_summary <- MST_orthoptera_summary %>% split(MST_orthoptera_summary$group) # Split so you can separately index each sampling block
+MST_orthoptera_summary
 
-names(RC_orthoptera)[names(RC_orthoptera) == "name2"] <- "block_num"
+MST_orthoptera_boot <- NST_orthoptera_boot
 
-RC_orthoptera <- separate(RC_orthoptera, block_num, into = c("block", "num"))
-RC_orthoptera$RC.ruzicka <- as.numeric(RC_orthoptera$RC.ruzicka)
+MST_orthoptera_B <- c('B', MST_orthoptera_summary$'B'$MST.i.ruzicka, 
+                      quantile(MST_orthoptera_boot$detail$MST.boot$'B', probs = 0.025), 
+                      quantile(MST_orthoptera_boot$detail$MST.boot$'B', probs = 0.975))
+MST_orthoptera_C <- c('C', MST_orthoptera_summary$'C'$MST.i.ruzicka, 
+                      quantile(MST_orthoptera_boot$detail$MST.boot$'C', probs = 0.025), 
+                      quantile(MST_orthoptera_boot$detail$MST.boot$'C', probs = 0.975))
+MST_orthoptera_D <- c('D', MST_orthoptera_summary$'D'$MST.i.ruzicka, 
+                      quantile(MST_orthoptera_boot$detail$MST.boot$'D', probs = 0.025), 
+                      quantile(MST_orthoptera_boot$detail$MST.boot$'D', probs = 0.975))
+MST_orthoptera_F <- c('F', MST_orthoptera_summary$'F'$MST.i.ruzicka, 
+                      quantile(MST_orthoptera_boot$detail$MST.boot$'F', probs = 0.025), 
+                      quantile(MST_orthoptera_boot$detail$MST.boot$'F', probs = 0.975))
+MST_orthoptera_OG2 <- c('OG2', MST_orthoptera_summary$'OG2'$MST.i.ruzicka, 
+                        quantile(MST_orthoptera_boot$detail$MST.boot$'OG2', probs = 0.025), 
+                        quantile(MST_orthoptera_boot$detail$MST.boot$'OG2', probs = 0.975))
+MST_orthoptera_OG3 <- c('OG3', MST_orthoptera_summary$'OG3'$MST.i.ruzicka, 
+                        quantile(MST_orthoptera_boot$detail$MST.boot$'OG3', probs = 0.025), 
+                        quantile(MST_orthoptera_boot$detail$MST.boot$'OG3', probs = 0.975))
 
-# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
-RC_orthoptera$RC.ruzicka <- abs(RC_orthoptera$RC.ruzicka)
 
-# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
-RC_orthoptera <- RC_orthoptera %>% mutate(one_minus_RC = 1 - RC.ruzicka)
-# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
-names(RC_orthoptera)[names(RC_orthoptera) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
-names(RC_orthoptera)[names(RC_orthoptera) == "one_minus_RC"] <- "RC.ruzicka"
+MST_orthoptera_summary <- as.data.frame(rbind(MST_orthoptera_B, MST_orthoptera_C, MST_orthoptera_D,
+                                              MST_orthoptera_F,
+                                              MST_orthoptera_OG2, MST_orthoptera_OG3))
 
-## Calculate 95% quantiles by bootstrapping
-RC_orthoptera <- RC_orthoptera %>% select('block', 'RC.ruzicka') # Just need RC and block name
+colnames(MST_orthoptera_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(MST_orthoptera_summary) = 1:6
 
-RC_orthoptera <- RC_orthoptera %>% split( RC_orthoptera$block) # Split so you can separately index each sampling block
+MST_orthoptera_summary$mean <- as.numeric(MST_orthoptera_summary$mean)
+MST_orthoptera_summary$lower.95.quant <- as.numeric(MST_orthoptera_summary$lower.95.quant)
+MST_orthoptera_summary$upper.95.quant <- as.numeric(MST_orthoptera_summary$upper.95.quant)
 
-## Calculate mean and bootstrapped CIs for each sampling block
-RC_orthoptera_summary_B <- c('B', mean(RC_orthoptera$B$RC.ruzicka), bootstrap(RC_orthoptera$B$RC.ruzicka))
-RC_orthoptera_summary_C <- c('C', mean(RC_orthoptera$C$RC.ruzicka), bootstrap(RC_orthoptera$C$RC.ruzicka))
-RC_orthoptera_summary_D <- c('D', mean(RC_orthoptera$D$RC.ruzicka), bootstrap(RC_orthoptera$D$RC.ruzicka))
-RC_orthoptera_summary_F <- c('F', mean(RC_orthoptera$F$RC.ruzicka), bootstrap(RC_orthoptera$F$RC.ruzicka))
-RC_orthoptera_summary_OG2 <- c('OG2', mean(RC_orthoptera$OG2$RC.ruzicka), bootstrap(RC_orthoptera$OG2$RC.ruzicka))
-RC_orthoptera_summary_OG3 <- c('OG3', mean(RC_orthoptera$OG3$RC.ruzicka), bootstrap(RC_orthoptera$OG3$RC.ruzicka))
+MST_orthoptera_summary <- left_join(MST_orthoptera_summary, ACD_orthoptera_summary, by = "block")
 
-## Combine these all into a dataframe
-RC_orthoptera_summary <- as.data.frame(rbind(RC_orthoptera_summary_B, RC_orthoptera_summary_C, RC_orthoptera_summary_D, 
-                                             RC_orthoptera_summary_F, RC_orthoptera_summary_OG2, RC_orthoptera_summary_OG3))
-                                             
-# Rename column and row headings
-colnames(RC_orthoptera_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
-rownames(RC_orthoptera_summary) = 1:6
+MST_orthoptera_summary$range <- MST_orthoptera_summary$upper.95.quant - MST_orthoptera_summary$lower.95.quant
+MST_orthoptera_summary
 
-# Add mean ACD
-RC_orthoptera_summary <- left_join(RC_orthoptera_summary, ACD_orthoptera_summary, by = "block")
+write.csv(MST_orthoptera_summary, file = "Results/MST_orthoptera_summary.csv")
 
-RC_orthoptera_summary$mean <- as.numeric(RC_orthoptera_summary$mean)
-RC_orthoptera_summary$lower.95.quant <- as.numeric(RC_orthoptera_summary$lower.95.quant)
-RC_orthoptera_summary$upper.95.quant <- as.numeric(RC_orthoptera_summary$upper.95.quant)
-
-RC_orthoptera_summary$range <- RC_orthoptera_summary$upper.95.quant - RC_orthoptera_summary$lower.95.quant
-
-write.csv(RC_orthoptera_summary, file = "Results/RC_orthoptera_summary.csv")
 
 ##### NTP - Neutral taxa percentage #####
 
@@ -1796,61 +1812,66 @@ mean(NST_spiders_summary$mean)
 
 write.csv(NST_spiders_summary, file = "Results/NST_spiders_summary.csv")
 
-##### RC - Raup-Crick #####
-RC_spiders <- NST_spiders$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
-names(RC_spiders)[names(RC_spiders) == "name2"] <- "block_num"
 
-RC_spiders <- separate(RC_spiders, block_num, into = c("block", "num"))
-RC_spiders$RC.ruzicka <- as.numeric(RC_spiders$RC.ruzicka)
+##### MST - Modified stochasticity ratio #####
 
-# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
-RC_spiders$RC.ruzicka <- abs(RC_spiders$RC.ruzicka)
+MST_spiders_summary <- subset(NST_spiders$index.grp,  select = c(group, MST.i.ruzicka))
+MST_spiders_summary <- MST_spiders_summary %>% split(MST_spiders_summary$group) # Split so you can separately index each sampling block
 
-# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
-RC_spiders <- RC_spiders %>% mutate(one_minus_RC = 1 - RC.ruzicka)
-# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
-names(RC_spiders)[names(RC_spiders) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
-names(RC_spiders)[names(RC_spiders) == "one_minus_RC"] <- "RC.ruzicka"
+MST_spiders_boot <- NST_spiders_boot
 
-## Calculate 95% quantiles by bootstrapping
-RC_spiders <- RC_spiders %>% select('block', 'RC.ruzicka') # Just need RC and block name
-RC_spiders <- RC_spiders %>% split( RC_spiders$block) # Split so you can separately index each sampling block
+MST_spiders_A <- c('A', MST_spiders_summary$'A'$MST.i.ruzicka, 
+                   quantile(MST_spiders_boot$detail$MST.boot$'A', probs = 0.025), 
+                   quantile(MST_spiders_boot$detail$MST.boot$'A', probs = 0.975))
+MST_spiders_B <- c('B', MST_spiders_summary$'B'$MST.i.ruzicka, 
+                   quantile(MST_spiders_boot$detail$MST.boot$'B', probs = 0.025), 
+                   quantile(MST_spiders_boot$detail$MST.boot$'B', probs = 0.975))
+MST_spiders_C <- c('C', MST_spiders_summary$'C'$MST.i.ruzicka, 
+                   quantile(MST_spiders_boot$detail$MST.boot$'C', probs = 0.025), 
+                   quantile(MST_spiders_boot$detail$MST.boot$'C', probs = 0.975))
+MST_spiders_D <- c('D', MST_spiders_summary$'D'$MST.i.ruzicka, 
+                   quantile(MST_spiders_boot$detail$MST.boot$'D', probs = 0.025), 
+                   quantile(MST_spiders_boot$detail$MST.boot$'D', probs = 0.975))
+MST_spiders_E <- c('E', MST_spiders_summary$'E'$MST.i.ruzicka, 
+                   quantile(MST_spiders_boot$detail$MST.boot$'E', probs = 0.025), 
+                   quantile(MST_spiders_boot$detail$MST.boot$'E', probs = 0.975))
+MST_spiders_F <- c('F', MST_spiders_summary$'F'$MST.i.ruzicka, 
+                   quantile(MST_spiders_boot$detail$MST.boot$'F', probs = 0.025), 
+                   quantile(MST_spiders_boot$detail$MST.boot$'F', probs = 0.975))
+MST_spiders_LF1 <- c('LF1', MST_spiders_summary$'LF1'$MST.i.ruzicka, 
+                     quantile(MST_spiders_boot$detail$MST.boot$'LF1', probs = 0.025), 
+                     quantile(MST_spiders_boot$detail$MST.boot$'LF1', probs = 0.975))
+MST_spiders_LF2 <- c('LF2', MST_spiders_summary$'LF2'$MST.i.ruzicka, 
+                     quantile(MST_spiders_boot$detail$MST.boot$'LF2', probs = 0.025), 
+                     quantile(MST_spiders_boot$detail$MST.boot$'LF2', probs = 0.975))
+MST_spiders_OG2 <- c('OG2', MST_spiders_summary$'OG2'$MST.i.ruzicka, 
+                     quantile(MST_spiders_boot$detail$MST.boot$'OG2', probs = 0.025), 
+                     quantile(MST_spiders_boot$detail$MST.boot$'OG2', probs = 0.975))
+MST_spiders_OG3 <- c('OG3', MST_spiders_summary$'OG3'$MST.i.ruzicka, 
+                     quantile(MST_spiders_boot$detail$MST.boot$'OG3', probs = 0.025), 
+                     quantile(MST_spiders_boot$detail$MST.boot$'OG3', probs = 0.975))
+MST_spiders_summary <- as.data.frame(rbind(MST_spiders_A, MST_spiders_B, MST_spiders_C, MST_spiders_D,
+                                           MST_spiders_E, MST_spiders_F, MST_spiders_LF1, MST_spiders_LF2, 
+                                           MST_spiders_OG2, MST_spiders_OG3))
 
-## Calculate mean and bootstrapped CIs for each sampling block
-RC_spiders_summary_A <- c('A', mean(RC_spiders$A$RC.ruzicka), bootstrap(RC_spiders$A$RC.ruzicka))
-RC_spiders_summary_B <- c('B', mean(RC_spiders$B$RC.ruzicka), bootstrap(RC_spiders$B$RC.ruzicka))
-RC_spiders_summary_C <- c('C', mean(RC_spiders$C$RC.ruzicka), bootstrap(RC_spiders$C$RC.ruzicka))
-RC_spiders_summary_D <- c('D', mean(RC_spiders$D$RC.ruzicka), bootstrap(RC_spiders$D$RC.ruzicka))
-RC_spiders_summary_E <- c('E', mean(RC_spiders$E$RC.ruzicka), bootstrap(RC_spiders$E$RC.ruzicka))
-RC_spiders_summary_F <- c('F', mean(RC_spiders$F$RC.ruzicka), bootstrap(RC_spiders$F$RC.ruzicka))
-RC_spiders_summary_LF1 <- c('LF1', mean(RC_spiders$LF1$RC.ruzicka), bootstrap(RC_spiders$LF1$RC.ruzicka))
-RC_spiders_summary_LF2 <- c('LF2', mean(RC_spiders$LF2$RC.ruzicka), bootstrap(RC_spiders$LF2$RC.ruzicka))
-RC_spiders_summary_OG2 <- c('OG2', mean(RC_spiders$OG2$RC.ruzicka), bootstrap(RC_spiders$OG2$RC.ruzicka))
-RC_spiders_summary_OG3 <- c('OG3', mean(RC_spiders$OG3$RC.ruzicka), bootstrap(RC_spiders$OG3$RC.ruzicka))
+colnames(MST_spiders_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(MST_spiders_summary) = 1:10
 
-## Combine these all into a dataframe
-RC_spiders_summary <- as.data.frame(rbind(RC_spiders_summary_A, RC_spiders_summary_B, RC_spiders_summary_C, RC_spiders_summary_D, 
-                                          RC_spiders_summary_E, RC_spiders_summary_F, RC_spiders_summary_LF1, RC_spiders_summary_LF2, 
-                                          RC_spiders_summary_OG2, RC_spiders_summary_OG3))
+str(MST_spiders_summary)
 
-RC_spiders_summary
+MST_spiders_summary$mean <- as.numeric(MST_spiders_summary$mean)
+MST_spiders_summary$lower.95.quant <- as.numeric(MST_spiders_summary$lower.95.quant)
+MST_spiders_summary$upper.95.quant <- as.numeric(MST_spiders_summary$upper.95.quant)
 
-# Rename column and row headings
-colnames(RC_spiders_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
-rownames(RC_spiders_summary) = 1:10
-# Add mean ACD
-RC_spiders_summary <- left_join(RC_spiders_summary, ACD_spiders_summary, by = "block")
+MST_spiders_summary <- left_join(MST_spiders_summary, ACD_spiders_summary, by = "block")
 
-str(RC_spiders_summary)
-RC_spiders_summary$mean <- as.numeric(RC_spiders_summary$mean)
-RC_spiders_summary$lower.95.quant <- as.numeric(RC_spiders_summary$lower.95.quant)
-RC_spiders_summary$upper.95.quant <- as.numeric(RC_spiders_summary$upper.95.quant)
+MST_spiders_summary$range <- MST_spiders_summary$upper.95.quant - MST_spiders_summary$lower.95.quant
+MST_spiders_summary
 
-RC_spiders_summary$range <- RC_spiders_summary$upper.95.quant - RC_spiders_summary$lower.95.quant
+mean(MST_spiders_summary$mean)
 
-mean(RC_spiders_summary$mean)
+write.csv(MST_spiders_summary, file = "Results/MST_spiders_summary.csv")
 
-write.csv(RC_spiders_summary, file = "Results/RC_spiders_summary.csv")
 
 ##### NTP - Neutral taxa percentage #####
 
@@ -2106,59 +2127,66 @@ NST_moths_summary
 mean(NST_moths_summary$mean)
 
 write.csv(NST_moths_summary, file = "Results/NST_moths_summary.csv")
-
-##### RC - Raup-Crick #####
-
-RC_moths <- NST_moths$index.pair %>% dplyr :: select(name1, name2, RC.ruzicka)
-names(RC_moths)[names(RC_moths) == "name2"] <- "block_num"
-RC_moths <- separate(RC_moths, block_num, into = c("block", "num"))
-RC_moths$RC.ruzicka <- as.numeric(RC_moths$RC.ruzicka)
-
-# NEED TO TAKE THE ABSOLUTE OF THE RAW RC VALUES THEN USE THESE TO WORK OUT THE BOOTSTRAP CIs
-RC_moths$RC.ruzicka <- abs(RC_moths$RC.ruzicka)
-
-# AND CHANGE IT TO 1-RC SO THAT IT IS SCALED IN THE SAME DIRECTION AS THE OTHER METRICS (0 is deterministic and 1 is stochastic)
-RC_moths <- RC_moths %>% mutate(one_minus_RC = 1 - RC.ruzicka)
-# Change the 1-RC column name to RC.ruzicka, since this is the column that should be used for the rest of the analysis
-names(RC_moths)[names(RC_moths) == "RC.ruzicka"] <- "RCabs (before 1-RC)"
-names(RC_moths)[names(RC_moths) == "one_minus_RC"] <- "RC.ruzicka"
-
-## Calculate 95% quantiles by bootstrapping
-RC_moths <- RC_moths %>% select('block', 'RC.ruzicka') # Just need RC and block name
-RC_moths <- RC_moths %>% split( RC_moths$block) # Split so you can separately index each sampling block
-
-## Calculate mean and bootstrapped CIs for each sampling block
-RC_moths_summary_A <- c('A', mean(RC_moths$A$RC.ruzicka), bootstrap(RC_moths$A$RC.ruzicka))
-RC_moths_summary_B <- c('B', mean(RC_moths$B$RC.ruzicka), bootstrap(RC_moths$B$RC.ruzicka))
-RC_moths_summary_C <- c('C', mean(RC_moths$C$RC.ruzicka), bootstrap(RC_moths$C$RC.ruzicka))
-RC_moths_summary_D <- c('D', mean(RC_moths$D$RC.ruzicka), bootstrap(RC_moths$D$RC.ruzicka))
-RC_moths_summary_E <- c('E', mean(RC_moths$E$RC.ruzicka), bootstrap(RC_moths$E$RC.ruzicka))
-RC_moths_summary_F <- c('F', mean(RC_moths$F$RC.ruzicka), bootstrap(RC_moths$F$RC.ruzicka))
-RC_moths_summary_OG2 <- c('OG2', mean(RC_moths$OG2$RC.ruzicka), bootstrap(RC_moths$OG2$RC.ruzicka))
-RC_moths_summary_OG3 <- c('OG3', mean(RC_moths$OG3$RC.ruzicka), bootstrap(RC_moths$OG3$RC.ruzicka))
+##### MST - Modified stochasticity ratio #####
 
 
-## Combine these all into a dataframe
-RC_moths_summary <- as.data.frame(rbind(RC_moths_summary_A, RC_moths_summary_B, RC_moths_summary_C, RC_moths_summary_D, 
-                                          RC_moths_summary_E, RC_moths_summary_F,  RC_moths_summary_OG2, RC_moths_summary_OG3))
 
-RC_moths_summary
+MST_moths_summary <- subset(NST_moths$index.grp,  select = c(group, MST.i.ruzicka))
+MST_moths_summary <- MST_moths_summary %>% split(MST_moths_summary$group) # Split so you can separately index each sampling block
 
-# Rename column and row headings
-colnames(RC_moths_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
-rownames(RC_moths_summary) = 1:8
-# Add mean ACD
-RC_moths_summary <- left_join(RC_moths_summary, ACD_moths_summary, by = "block")
+MST_moths_boot <- NST_moths_boot
 
-RC_moths_summary$mean <- as.numeric(RC_moths_summary$mean)
-RC_moths_summary$lower.95.quant <- as.numeric(RC_moths_summary$lower.95.quant)
-RC_moths_summary$upper.95.quant <- as.numeric(RC_moths_summary$upper.95.quant)
+MST_moths_A <- c('A', MST_moths_summary$'A'$MST.i.ruzicka, 
+                 quantile(MST_moths_boot$detail$MST.boot$'A', probs = 0.025), 
+                 quantile(MST_moths_boot$detail$MST.boot$'A', probs = 0.975))
 
-RC_moths_summary$range <- RC_moths_summary$upper.95.quant - RC_moths_summary$lower.95.quant
-RC_moths_summary
-mean(RC_moths_summary$mean)
+MST_moths_B <- c('B', MST_moths_summary$'B'$MST.i.ruzicka, 
+                 quantile(MST_moths_boot$detail$MST.boot$'B', probs = 0.025), 
+                 quantile(MST_moths_boot$detail$MST.boot$'B', probs = 0.975))
 
-write.csv(RC_moths_summary, file = "Results/RC_moths_summary.csv")
+MST_moths_C <- c('C', MST_moths_summary$'C'$MST.i.ruzicka, 
+                 quantile(MST_moths_boot$detail$MST.boot$'C', probs = 0.025), 
+                 quantile(MST_moths_boot$detail$MST.boot$'C', probs = 0.975))
+
+MST_moths_D <- c('D', MST_moths_summary$'D'$MST.i.ruzicka, 
+                 quantile(MST_moths_boot$detail$MST.boot$'D', probs = 0.025), 
+                 quantile(MST_moths_boot$detail$MST.boot$'D', probs = 0.975))
+
+MST_moths_E <- c('E', MST_moths_summary$'E'$MST.i.ruzicka, 
+                 quantile(MST_moths_boot$detail$MST.boot$'E', probs = 0.025), 
+                 quantile(MST_moths_boot$detail$MST.boot$'E', probs = 0.975))
+
+MST_moths_F <- c('F', MST_moths_summary$'F'$MST.i.ruzicka, 
+                 quantile(MST_moths_boot$detail$MST.boot$'F', probs = 0.025), 
+                 quantile(MST_moths_boot$detail$MST.boot$'F', probs = 0.975))
+
+MST_moths_OG2 <- c('OG2', MST_moths_summary$'OG2'$MST.i.ruzicka, 
+                   quantile(MST_moths_boot$detail$MST.boot$'OG2', probs = 0.025), 
+                   quantile(MST_moths_boot$detail$MST.boot$'OG2', probs = 0.975))
+
+MST_moths_OG3 <- c('OG3', MST_moths_summary$'OG3'$MST.i.ruzicka, 
+                   quantile(MST_moths_boot$detail$MST.boot$'OG3', probs = 0.025), 
+                   quantile(MST_moths_boot$detail$MST.boot$'OG3', probs = 0.975))
+
+MST_moths_summary <- as.data.frame(rbind(MST_moths_A, MST_moths_B, MST_moths_C, MST_moths_D,
+                                         MST_moths_E, MST_moths_F, MST_moths_OG2, MST_moths_OG3))
+
+colnames(MST_moths_summary) = c('block', 'mean', 'lower.95.quant', 'upper.95.quant')
+rownames(MST_moths_summary) = 1:8
+
+MST_moths_summary$mean <- as.numeric(MST_moths_summary$mean)
+MST_moths_summary$lower.95.quant <- as.numeric(MST_moths_summary$lower.95.quant)
+MST_moths_summary$upper.95.quant <- as.numeric(MST_moths_summary$upper.95.quant)
+
+MST_moths_summary <- left_join(MST_moths_summary, ACD_moths_summary, by = "block")
+MST_moths_summary$range <- MST_moths_summary$upper.95.quant - MST_moths_summary$lower.95.quant
+MST_moths_summary
+
+mean(MST_moths_summary$mean)
+
+write.csv(MST_moths_summary, file = "Results/MST_moths_summary.csv")
+
+
 
 ##### NTP - Neutral taxa percentage #####
 moths_composition_matrix <- as.data.frame(moths_composition_matrix)
