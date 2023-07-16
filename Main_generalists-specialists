@@ -40,42 +40,42 @@ summary(NST_generalist_specialist_betareg)
 plot(NST_generalist_specialist_betareg)
 
 
-##### RC ------------------------------------------------------------------------
+##### MST ------------------------------------------------------------------------
 
-RC_ants_summary <- read.csv("Results/RC_ants_summary.csv")
-RC_moths_summary <- read.csv("Results/RC_moths_summary.csv")
-RC_orthoptera_summary <- read.csv("Results/RC_orthoptera_summary.csv")
-RC_rove_beetles_summary <- read.csv("Results/RC_rove_beetles_summary.csv")
-RC_scarabs_summary <- read.csv("Results/RC_scarabs_summary.csv")
-RC_spiders_summary <- read.csv("Results/RC_spiders_summary.csv")
-RC_weevils_summary <- read.csv("Results/RC_weevils_summary.csv")
+MST_ants_summary <- read.csv("Results/MST_ants_summary.csv")
+MST_moths_summary <- read.csv("Results/MST_moths_summary.csv")
+MST_orthoptera_summary <- read.csv("Results/MST_orthoptera_summary.csv")
+MST_rove_beetles_summary <- read.csv("Results/MST_rove_beetles_summary.csv")
+MST_scarabs_summary <- read.csv("Results/MST_scarabs_summary.csv")
+MST_spiders_summary <- read.csv("Results/MST_spiders_summary.csv")
+MST_weevils_summary <- read.csv("Results/MST_weevils_summary.csv")
 
-RC_ants_summary$taxa <- 'Ants'
-RC_moths_summary$taxa <- 'Moths'
-RC_orthoptera_summary$taxa <- 'Orthoptera'
-RC_rove_beetles_summary$taxa <- 'Rove beetles'
-RC_scarabs_summary$taxa <- 'Scarabs'
-RC_spiders_summary$taxa <- 'Spiders'
-RC_weevils_summary$taxa <- 'Weevils'
+MST_ants_summary$taxa <- 'Ants'
+MST_moths_summary$taxa <- 'Moths'
+MST_orthoptera_summary$taxa <- 'Orthoptera'
+MST_rove_beetles_summary$taxa <- 'Rove beetles'
+MST_scarabs_summary$taxa <- 'Scarabs'
+MST_spiders_summary$taxa <- 'Spiders'
+MST_weevils_summary$taxa <- 'Weevils'
 
 
-RC_ants_summary$group <- 'Generalists'
-RC_moths_summary$group <- 'Specialists'
-RC_orthoptera_summary$group <- 'Specialists'
-RC_rove_beetles_summary$group <- 'Generalists'
-RC_scarabs_summary$group <- 'Specialists'
-RC_spiders_summary$group <- 'Specialists'
-RC_weevils_summary$group <- 'Specialists'
+MST_ants_summary$group <- 'Generalists'
+MST_moths_summary$group <- 'Specialists'
+MST_orthoptera_summary$group <- 'Specialists'
+MST_rove_beetles_summary$group <- 'Generalists'
+MST_scarabs_summary$group <- 'Specialists'
+MST_spiders_summary$group <- 'Specialists'
+MST_weevils_summary$group <- 'Specialists'
 
-RC_all_summary <- rbind(RC_ants_summary, RC_moths_summary, RC_orthoptera_summary, RC_rove_beetles_summary, 
-                        RC_scarabs_summary, RC_spiders_summary, RC_weevils_summary)
+MST_all_summary <- rbind(MST_ants_summary, MST_moths_summary, MST_orthoptera_summary, MST_rove_beetles_summary, 
+                         MST_scarabs_summary, MST_spiders_summary, MST_weevils_summary)
 
 
 
 library(betareg)
-RC_generalist_specialist_betareg <- betareg(mean ~ group, RC_all_summary)
-summary(RC_generalist_specialist_betareg)
-plot(RC_generalist_specialist_betareg)
+MST_generalist_specialist_betareg <- betareg(mean ~ group, MST_all_summary)
+summary(MST_generalist_specialist_betareg)
+plot(MST_generalist_specialist_betareg)
 
 
 ##### NTP -----------------------------------------------------------------------
