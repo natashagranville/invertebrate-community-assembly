@@ -4,9 +4,9 @@ Overview of R scripts:
 
 Main_community-assembly: Calculate stochasticity metrics (NST, MST and NTP) and community assembly processes (iCAMP) at each sample site for each taxonomic group.
 
-Main_figure1: Use betaregression to assess effect of logging on stochasticity metrics, and plot figure 1.
+Main_figure1: effect of logging on stochasticity metrics, and plot figure 1.
 
-Main_figure2 Use Dirichlet regression to assess effect of logging on community assembly processes, and plot figure 2.
+Main_figure2 effect of logging on community assembly processes, and plot figure 2.
 
 Main_generalists-specialists: Compare stochasticity metrics between trophic generalists and trophic specialists.
 
