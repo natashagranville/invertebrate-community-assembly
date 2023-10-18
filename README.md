@@ -1,4 +1,4 @@
-# Tropical invertebrate community assembly processes are robust to a gradient of land use intensity
+# Resilience of tropical invertebrate community assembly processes to a gradient of land use intensity
 
 Overview of R scripts:
 
