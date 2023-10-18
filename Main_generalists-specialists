@@ -34,11 +34,8 @@ NST_weevils_summary$group <- 'Specialists'
 NST_all_summary <- rbind(NST_ants_summary, NST_moths_summary, NST_orthoptera_summary, NST_rove_beetles_summary, 
                          NST_scarabs_summary, NST_spiders_summary, NST_weevils_summary)
 
-library(betareg)
-NST_generalist_specialist_betareg <- betareg(mean ~ group, NST_all_summary)
+NST_generalist_specialist_betareg <- glmmTMB(mean ~ group + (1|richness) + (1|area), NST_all_summary)
 summary(NST_generalist_specialist_betareg)
-plot(NST_generalist_specialist_betareg)
-
 
 ##### MST ------------------------------------------------------------------------
 
@@ -72,11 +69,8 @@ MST_all_summary <- rbind(MST_ants_summary, MST_moths_summary, MST_orthoptera_sum
 
 
 
-library(betareg)
-MST_generalist_specialist_betareg <- betareg(mean ~ group, MST_all_summary)
+MST_generalist_specialist_betareg <- glmmTMB(mean ~ group + (1|richness) + (1|area), MST_all_summary)
 summary(MST_generalist_specialist_betareg)
-plot(MST_generalist_specialist_betareg)
-
 
 ##### NTP -----------------------------------------------------------------------
 
@@ -106,7 +100,6 @@ NTP_weevils_summary$group <- 'Specialists'
 NTP_all_summary <- rbind(NTP_ants_summary, NTP_moths_summary, NTP_orthoptera_summary, NTP_rove_beetles_summary, 
                          NTP_spiders_summary, NTP_weevils_summary)
 
-library(betareg)
-NTP_generalist_specialist_betareg <- betareg(mean ~ group, NTP_all_summary)
+
+NTP_generalist_specialist_betareg <- glmmTMB(mean ~ group + (1|richness) + (1|area), NTP_all_summary)
 summary(NTP_generalist_specialist_betareg)
-plot(NTP_generalist_specialist_betareg)
